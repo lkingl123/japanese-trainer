@@ -17,25 +17,26 @@ const DEFAULT_PROGRESS: UserProgress = {
 
 // ===== Core Progress (jt_progress — single row) =====
 
-let cachedProgressId: string | null = null;
-
 async function getProgressRow(): Promise<{ id: string; data: Omit<UserProgress, 'vocabMastery' | 'grammarMastery'> }> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('jt_progress')
     .select('*')
     .limit(1)
     .single();
 
-  if (!data) {
+  if (error || !data) {
     // Create default row if none exists
-    const { data: created } = await supabase
+    const { data: created, error: insertErr } = await supabase
       .from('jt_progress')
       .insert({})
       .select()
       .single();
-    cachedProgressId = created!.id;
+    if (insertErr || !created) {
+      console.error('Failed to create progress row:', insertErr);
+      return { id: '', data: { ...DEFAULT_PROGRESS } };
+    }
     return {
-      id: created!.id,
+      id: created.id,
       data: {
         xp: 0, level: 1, currentStreak: 0, longestStreak: 0,
         lastActiveDate: '', dailyChallengeDate: null, unlockedLevels: ['N5'],
@@ -43,7 +44,6 @@ async function getProgressRow(): Promise<{ id: string; data: Omit<UserProgress, 
     };
   }
 
-  cachedProgressId = data.id;
   return {
     id: data.id,
     data: {
@@ -59,7 +59,8 @@ async function getProgressRow(): Promise<{ id: string; data: Omit<UserProgress, 
 }
 
 async function getVocabMasteryMap(): Promise<Record<string, SrsCard>> {
-  const { data } = await supabase.from('jt_vocab_mastery').select('*');
+  const { data, error } = await supabase.from('jt_vocab_mastery').select('*');
+  if (error) { console.error('Failed to fetch vocab mastery:', error); return {}; }
   if (!data) return {};
   const map: Record<string, SrsCard> = {};
   for (const row of data) {
@@ -76,7 +77,8 @@ async function getVocabMasteryMap(): Promise<Record<string, SrsCard>> {
 }
 
 async function getGrammarMasteryMap(): Promise<Record<string, { completed: boolean; score: number }>> {
-  const { data } = await supabase.from('jt_grammar_mastery').select('*');
+  const { data, error } = await supabase.from('jt_grammar_mastery').select('*');
+  if (error) { console.error('Failed to fetch grammar mastery:', error); return {}; }
   if (!data) return {};
   const map: Record<string, { completed: boolean; score: number }> = {};
   for (const row of data) {
@@ -95,14 +97,12 @@ export async function getProgress(): Promise<UserProgress> {
 }
 
 async function updateProgressFields(fields: Record<string, unknown>): Promise<void> {
-  if (!cachedProgressId) {
-    const row = await getProgressRow();
-    cachedProgressId = row.id;
-  }
-  await supabase
+  const row = await getProgressRow();
+  const { error } = await supabase
     .from('jt_progress')
     .update({ ...fields, updated_at: new Date().toISOString() })
-    .eq('id', cachedProgressId);
+    .eq('id', row.id);
+  if (error) console.error('Failed to update progress:', error);
 }
 
 // ===== XP & Streak Helpers =====
@@ -174,25 +174,28 @@ export async function updateVocabCard(wordId: string, correct: boolean): Promise
 
   const nextDate = new Date();
   nextDate.setDate(nextDate.getDate() + SRS_INTERVALS[newLevel]);
+  const nextReview = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
 
-  await supabase.from('jt_vocab_mastery').upsert({
+  const { error } = await supabase.from('jt_vocab_mastery').upsert({
     word_id: wordId,
     srs_level: newLevel,
-    next_review: nextDate.toISOString().split('T')[0],
+    next_review: nextReview,
     last_reviewed: getTodayString(),
     correct_count: card.correctCount + (correct ? 1 : 0),
     incorrect_count: card.incorrectCount + (correct ? 0 : 1),
   }, { onConflict: 'word_id' });
+  if (error) console.error('Failed to update vocab card:', error);
 }
 
 // ===== Grammar Mastery =====
 
 export async function updateGrammarMastery(patternId: string, score: number): Promise<void> {
-  await supabase.from('jt_grammar_mastery').upsert({
+  const { error } = await supabase.from('jt_grammar_mastery').upsert({
     pattern_id: patternId,
     completed: true,
     score,
   }, { onConflict: 'pattern_id' });
+  if (error) console.error('Failed to update grammar mastery:', error);
 }
 
 // ===== Level Unlock =====
@@ -246,11 +249,12 @@ function getXpThreshold(level: number): number {
 // ===== Date Helpers =====
 
 function getTodayString(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function getYesterdayString(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
