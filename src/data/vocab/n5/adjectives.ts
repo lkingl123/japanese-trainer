@@ -1,0 +1,111 @@
+import { VocabWord } from '@/lib/types';
+
+export const n5Adjectives: VocabWord[] = [
+  // Size & Amount
+  { id: 'n5-adj-001', romaji: 'ookii', japanese: '大きい', english: 'big / large', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-002', romaji: 'chiisai', japanese: '小さい', english: 'small / little', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-003', romaji: 'nagai', japanese: '長い', english: 'long', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-004', romaji: 'mijikai', japanese: '短い', english: 'short (length)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-005', romaji: 'takai', japanese: '高い', english: 'tall / high / expensive', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-006', romaji: 'hikui', japanese: '低い', english: 'low / short (height)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-007', romaji: 'yasui', japanese: '安い', english: 'cheap / inexpensive', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-008', romaji: 'hiroi', japanese: '広い', english: 'wide / spacious', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-009', romaji: 'semai', japanese: '狭い', english: 'narrow / cramped', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-010', romaji: 'futoi', japanese: '太い', english: 'thick / fat', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-011', romaji: 'hosoi', japanese: '細い', english: 'thin / slender', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-012', romaji: 'omoi', japanese: '重い', english: 'heavy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-013', romaji: 'karui', japanese: '軽い', english: 'light (weight)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-014', romaji: 'ooi', japanese: '多い', english: 'many / much', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-015', romaji: 'sukunai', japanese: '少ない', english: 'few / little', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Temperature & Sensation
+  { id: 'n5-adj-016', romaji: 'atsui', japanese: '暑い', english: 'hot (weather)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-017', romaji: 'samui', japanese: '寒い', english: 'cold (weather)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-018', romaji: 'atsui', japanese: '熱い', english: 'hot (to touch)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-019', romaji: 'tsumetai', japanese: '冷たい', english: 'cold (to touch)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-020', romaji: 'atatakai', japanese: '暖かい', english: 'warm', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-021', romaji: 'suzushii', japanese: '涼しい', english: 'cool / refreshing', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Quality & State
+  { id: 'n5-adj-022', romaji: 'ii / yoi', japanese: 'いい / 良い', english: 'good', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-023', romaji: 'warui', japanese: '悪い', english: 'bad', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-024', romaji: 'atarashii', japanese: '新しい', english: 'new', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-025', romaji: 'furui', japanese: '古い', english: 'old (things)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-026', romaji: 'hayai', japanese: '早い', english: 'early', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-027', romaji: 'hayai', japanese: '速い', english: 'fast / quick', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-028', romaji: 'osoi', japanese: '遅い', english: 'slow / late', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-029', romaji: 'chikai', japanese: '近い', english: 'near / close', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-030', romaji: 'tooi', japanese: '遠い', english: 'far / distant', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-031', romaji: 'akarui', japanese: '明るい', english: 'bright / cheerful', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-032', romaji: 'kurai', japanese: '暗い', english: 'dark', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-033', romaji: 'tsuyoi', japanese: '強い', english: 'strong', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-034', romaji: 'yowai', japanese: '弱い', english: 'weak', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-035', romaji: 'katai', japanese: '硬い', english: 'hard / stiff', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-036', romaji: 'yawarakai', japanese: '柔らかい', english: 'soft', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Taste
+  { id: 'n5-adj-037', romaji: 'oishii', japanese: 'おいしい', english: 'delicious / tasty', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-038', romaji: 'mazui', japanese: 'まずい', english: 'bad tasting', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-039', romaji: 'amai', japanese: '甘い', english: 'sweet', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-040', romaji: 'karai', japanese: '辛い', english: 'spicy / salty', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-041', romaji: 'suppai', japanese: '酸っぱい', english: 'sour', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-042', romaji: 'nigai', japanese: '苦い', english: 'bitter', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Emotions & Feelings (i-adjectives)
+  { id: 'n5-adj-043', romaji: 'ureshii', japanese: '嬉しい', english: 'happy / glad', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-044', romaji: 'kanashii', japanese: '悲しい', english: 'sad', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-045', romaji: 'tanoshii', japanese: '楽しい', english: 'fun / enjoyable', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-046', romaji: 'omoshiroi', japanese: '面白い', english: 'interesting / funny', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-047', romaji: 'tsumaranai', japanese: 'つまらない', english: 'boring', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-048', romaji: 'kowai', japanese: '怖い', english: 'scary / frightening', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-049', romaji: 'sabishii', japanese: '寂しい', english: 'lonely', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-050', romaji: 'hazukashii', japanese: '恥ずかしい', english: 'embarrassing / shy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-051', romaji: 'isogashii', japanese: '忙しい', english: 'busy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-052', romaji: 'nemui', japanese: '眠い', english: 'sleepy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-053', romaji: 'itai', japanese: '痛い', english: 'painful', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Difficulty
+  { id: 'n5-adj-054', romaji: 'muzukashii', japanese: '難しい', english: 'difficult', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-055', romaji: 'yasashii', japanese: '易しい', english: 'easy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Appearance
+  { id: 'n5-adj-056', romaji: 'utsukushii', japanese: '美しい', english: 'beautiful', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-057', romaji: 'kawaii', japanese: 'かわいい', english: 'cute', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-058', romaji: 'kakkoii', japanese: 'かっこいい', english: 'cool / handsome', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-059', romaji: 'kitanai', japanese: '汚い', english: 'dirty', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // Other i-adjectives
+  { id: 'n5-adj-060', romaji: 'wakai', japanese: '若い', english: 'young', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-061', romaji: 'usui', japanese: '薄い', english: 'thin / pale', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-062', romaji: 'atsui', japanese: '厚い', english: 'thick (book, etc.)', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-063', romaji: 'marui', japanese: '丸い', english: 'round', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-064', romaji: 'urusai', japanese: 'うるさい', english: 'noisy / annoying', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-065', romaji: 'abunai', japanese: '危ない', english: 'dangerous', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-066', romaji: 'subarashii', japanese: '素晴らしい', english: 'wonderful / splendid', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+  { id: 'n5-adj-067', romaji: 'hoshii', japanese: '欲しい', english: 'wanted / desired', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'i-adjective' },
+
+  // na-adjectives
+  { id: 'n5-adj-068', romaji: 'genki', japanese: '元気', english: 'healthy / energetic', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-069', romaji: 'kirei', japanese: 'きれい', english: 'clean / beautiful', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-070', romaji: 'shizuka', japanese: '静か', english: 'quiet / peaceful', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-071', romaji: 'nigiyaka', japanese: '賑やか', english: 'lively / bustling', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-072', romaji: 'yuumei', japanese: '有名', english: 'famous', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-073', romaji: 'benri', japanese: '便利', english: 'convenient', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-074', romaji: 'fuben', japanese: '不便', english: 'inconvenient', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-075', romaji: 'taisetsu', japanese: '大切', english: 'important / precious', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-076', romaji: 'hima', japanese: '暇', english: 'free time / not busy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-077', romaji: 'jouzu', japanese: '上手', english: 'skillful / good at', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-078', romaji: 'heta', japanese: '下手', english: 'unskillful / bad at', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-079', romaji: 'suki', japanese: '好き', english: 'like / fond of', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-080', romaji: 'kirai', japanese: '嫌い', english: 'dislike / hate', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-081', romaji: 'daijoubu', japanese: '大丈夫', english: 'okay / all right', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-082', romaji: 'dame', japanese: 'だめ', english: 'no good / must not', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-083', romaji: 'shinsetsu', japanese: '親切', english: 'kind / friendly', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-084', romaji: 'taihen', japanese: '大変', english: 'very / terrible / hard', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-085', romaji: 'kantan', japanese: '簡単', english: 'simple / easy', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-086', romaji: 'fukuzatsu', japanese: '複雑', english: 'complicated', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-087', romaji: 'tokubetsu', japanese: '特別', english: 'special', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-088', romaji: 'rippa', japanese: '立派', english: 'splendid / fine', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-089', romaji: 'iroiro', japanese: 'いろいろ', english: 'various', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+  { id: 'n5-adj-090', romaji: 'jiyuu', japanese: '自由', english: 'free / liberty', category: 'adjectives', jlptLevel: 'N5', partOfSpeech: 'na-adjective' },
+];
