@@ -159,8 +159,8 @@ export default function ChallengePage() {
           <span className="text-sm text-text-secondary">{questionNum}/{totalQuestions}</span>
         </div>
         <p className="text-sm text-text-secondary mb-2 text-center">Grammar Round</p>
-        {current.type === 'fill-blank' && <FillBlank exercise={current} onAnswer={handleGrammarAnswer} />}
-        {current.type === 'multiple-choice' && <MultipleChoice exercise={current} onAnswer={handleGrammarAnswer} />}
+        {current.type === 'fill-blank' && <FillBlank key={grammarIndex} exercise={current} onAnswer={handleGrammarAnswer} />}
+        {current.type === 'multiple-choice' && <MultipleChoice key={grammarIndex} exercise={current} onAnswer={handleGrammarAnswer} />}
       </div>
     );
   }

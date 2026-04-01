@@ -72,9 +72,9 @@ export default function GrammarExercise({ pattern, onComplete }: GrammarExercise
         <span className="text-sm text-text-secondary font-medium">{currentIndex + 1}/{exercises.length}</span>
       </div>
 
-      {current.type === 'fill-blank' && <FillBlank exercise={current} onAnswer={handleAnswer} />}
-      {current.type === 'sentence-build' && <SentenceBuild exercise={current} onAnswer={handleAnswer} />}
-      {current.type === 'multiple-choice' && <MultipleChoice exercise={current} onAnswer={handleAnswer} />}
+      {current.type === 'fill-blank' && <FillBlank key={currentIndex} exercise={current} onAnswer={handleAnswer} />}
+      {current.type === 'sentence-build' && <SentenceBuild key={currentIndex} exercise={current} onAnswer={handleAnswer} />}
+      {current.type === 'multiple-choice' && <MultipleChoice key={currentIndex} exercise={current} onAnswer={handleAnswer} />}
 
       {answered && (
         <Button onClick={handleNext} className="w-full mt-4">
