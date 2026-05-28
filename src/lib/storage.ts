@@ -93,7 +93,23 @@ export async function getProgress(): Promise<UserProgress> {
     getVocabMasteryMap(),
     getGrammarMasteryMap(),
   ]);
-  return { ...progressRow.data, vocabMastery, grammarMastery };
+  const data = progressRow.data;
+
+  // Reset streak if the user missed a day. lastActiveDate is only updated on
+  // activity, so a stored streak silently stays valid forever otherwise.
+  const today = getTodayString();
+  const yesterday = getYesterdayString();
+  const stale =
+    data.currentStreak > 0 &&
+    data.lastActiveDate !== '' &&
+    data.lastActiveDate !== today &&
+    data.lastActiveDate !== yesterday;
+  if (stale) {
+    await updateProgressFields({ current_streak: 0 });
+    return { ...data, currentStreak: 0, vocabMastery, grammarMastery };
+  }
+
+  return { ...data, vocabMastery, grammarMastery };
 }
 
 async function updateProgressFields(fields: Record<string, unknown>): Promise<void> {
