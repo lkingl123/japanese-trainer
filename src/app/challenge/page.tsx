@@ -46,6 +46,24 @@ export default function ChallengePage() {
     init();
   }, []);
 
+  // Auto-redirect to home after showing completion
+  useEffect(() => {
+    if (phase === 'done') {
+      const timer = setTimeout(() => router.push('/'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, router]);
+
+  // Clear any lingering vocab-phase selection state when entering grammar.
+  // Without this, parent selected/isCorrect from the final vocab question
+  // can leave the page in a half-locked state across the phase boundary.
+  useEffect(() => {
+    if (phase === 'grammar') {
+      setSelected(null);
+      setIsCorrect(null);
+    }
+  }, [phase]);
+
   if (loading) return <div className="flex items-center justify-center min-h-screen text-text-secondary">Loading...</div>;
 
   if (alreadyDone) {
@@ -74,9 +92,9 @@ export default function ChallengePage() {
       setSelected(option);
       const correct = option === current.correctAnswer;
       setIsCorrect(correct);
-      await updateVocabCard(current.word.id, correct);
-      if (correct) { await addXp(XP_VALUES.vocabCorrect); setTotalCorrect((c) => c + 1); }
-      await updateStreak();
+      await updateVocabCard(current.word.id, correct).catch(() => {});
+      if (correct) { await addXp(XP_VALUES.vocabCorrect).catch(() => {}); setTotalCorrect((c) => c + 1); }
+      await updateStreak().catch(() => {});
       setTimeout(() => {
         if (vocabIndex + 1 < vocabQuestions.length) setVocabIndex((i) => i + 1);
         else setPhase('grammar');
@@ -138,14 +156,27 @@ export default function ChallengePage() {
     const current = grammarExercises[grammarIndex];
     const questionNum = vocabQuestions.length + grammarIndex + 1;
     const progress = (questionNum / totalQuestions) * 100;
+    const isLast = grammarIndex + 1 >= grammarExercises.length;
     const handleGrammarAnswer = async (correct: boolean) => {
-      if (correct) { await addXp(XP_VALUES.grammarCorrect); setTotalCorrect((c) => c + 1); }
-      await updateStreak();
+      if (correct) { await addXp(XP_VALUES.grammarCorrect).catch(() => {}); setTotalCorrect((c) => c + 1); }
+      await updateStreak().catch(() => {});
       setTimeout(async () => {
-        if (grammarIndex + 1 < grammarExercises.length) setGrammarIndex((i) => i + 1);
-        else { await markDailyChallengeComplete(); await addXp(XP_VALUES.dailyChallenge); setPhase('done'); }
+        if (!isLast) {
+          setGrammarIndex((i) => i + 1);
+        } else {
+          try {
+            await markDailyChallengeComplete();
+            await addXp(XP_VALUES.dailyChallenge);
+          } catch (e) {
+            console.error('Failed to save challenge completion:', e);
+          }
+          setPhase('done');
+        }
       }, 1500);
     };
+    // Combine phase + index so the child remounts cleanly between phases too,
+    // not just between same-phase indexes.
+    const childKey = `grammar-${grammarIndex}`;
     return (
       <div className="px-4 pt-6">
         <div className="flex items-center gap-3 mb-4">
@@ -159,8 +190,8 @@ export default function ChallengePage() {
           <span className="text-sm text-text-secondary">{questionNum}/{totalQuestions}</span>
         </div>
         <p className="text-sm text-text-secondary mb-2 text-center">Grammar Round</p>
-        {current.type === 'fill-blank' && <FillBlank key={grammarIndex} exercise={current} onAnswer={handleGrammarAnswer} />}
-        {current.type === 'multiple-choice' && <MultipleChoice key={grammarIndex} exercise={current} onAnswer={handleGrammarAnswer} />}
+        {current.type === 'fill-blank' && <FillBlank key={childKey} exercise={current} onAnswer={handleGrammarAnswer} />}
+        {current.type === 'multiple-choice' && <MultipleChoice key={childKey} exercise={current} onAnswer={handleGrammarAnswer} />}
       </div>
     );
   }
