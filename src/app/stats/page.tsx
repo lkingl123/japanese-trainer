@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import ProgressBar from '@/components/ui/ProgressBar';
@@ -138,6 +139,11 @@ export default function StatsPage() {
           </div>
         </Card>
       )}
+      <Link href="/settings">
+        <p className="text-center text-xs text-text-secondary py-6 underline">
+          Backup &amp; settings
+        </p>
+      </Link>
     </div>
   );
 }
