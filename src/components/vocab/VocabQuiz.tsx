@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { VocabWord, QuizQuestion, QuizResult } from '@/lib/types';
 import { generateQuizQuestions } from '@/lib/quiz';
 import { speakJapanese } from '@/lib/speech';
@@ -27,30 +27,55 @@ export default function VocabQuiz({ words, onComplete }: VocabQuizProps) {
 
   const current = questions[currentIndex];
 
+  // Auto-play the audio for listening questions when a new one appears. Keyed
+  // on currentIndex so it fires once per question, not on every re-render.
+  useEffect(() => {
+    if (current?.type === 'hear-pick-meaning') {
+      const t = setTimeout(() => speakJapanese(current.word.japanese), 200);
+      return () => clearTimeout(t);
+    }
+  }, [currentIndex, current]);
+
   const handleSelect = useCallback(
-    async (option: string) => {
+    (option: string) => {
       if (selected !== null) return;
-      setSelected(option);
       const correct = option === current.correctAnswer;
+      setSelected(option);
       setIsCorrect(correct);
-      await updateVocabCard(current.word.id, correct);
+
+      // Persist progress in the background. These are network round-trips and
+      // must NOT gate the question advance — awaiting them here meant the
+      // setTimeout below only started after Supabase responded, and under a
+      // slow/variable connection the advance + state-reset could interleave
+      // with the next render, leaving the next question stuck disabled and
+      // pre-marked wrong (the "answer carries over" bug).
+      void (async () => {
+        try {
+          await updateVocabCard(current.word.id, correct);
+          if (correct) await addXp(XP_VALUES.vocabCorrect);
+          await updateStreak();
+        } catch (e) {
+          console.error('Failed to persist quiz progress:', e);
+        }
+      })();
+
       if (correct) {
-        await addXp(XP_VALUES.vocabCorrect);
         setCorrectCount((c) => c + 1);
       } else {
         setWrongWords((w) => [...w, current.word]);
       }
-      await updateStreak();
 
-      setTimeout(async () => {
+      setTimeout(() => {
         if (currentIndex + 1 < questions.length) {
+          // Reset answer state and advance together so React batches them into
+          // a single commit — the next question always mounts clean.
           setCurrentIndex((i) => i + 1);
           setSelected(null);
           setIsCorrect(null);
         } else {
           const totalCorrect = correctCount + (correct ? 1 : 0);
           const isPerfect = totalCorrect === questions.length;
-          if (isPerfect) await addXp(XP_VALUES.perfectQuiz);
+          if (isPerfect) void addXp(XP_VALUES.perfectQuiz).catch(() => {});
           const result: QuizResult = {
             totalQuestions: questions.length,
             correctAnswers: totalCorrect,
@@ -93,10 +118,6 @@ export default function VocabQuiz({ words, onComplete }: VocabQuizProps) {
       wrongWords,
     };
     return <ResultScreen result={result} onRestart={restart} />;
-  }
-
-  if (current.type === 'hear-pick-meaning' && selected === null) {
-    setTimeout(() => speakJapanese(current.word.japanese), 200);
   }
 
   return (
