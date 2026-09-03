@@ -6,7 +6,8 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ value, className = '', color = 'bg-primary', showLabel = false }: ProgressBarProps) {
-  const clamped = Math.max(0, Math.min(100, value));
+  // A NaN from a 0/0 division would silently render an invalid width.
+  const clamped = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
   return (
     <div className={`w-full ${className}`}>
       <div className="h-2.5 rounded-full bg-black/5 overflow-hidden">

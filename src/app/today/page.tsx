@@ -39,8 +39,13 @@ export default function TodayPage() {
   async function handleQuizComplete(r: Result) {
     setResult(r);
     setStage('done');
-    if (!progress) return;
-    const updated = await completeSession(advanceProgress(progress));
+    // Advance from the stored progress rather than the copy captured when the
+    // page mounted, so the day counter cannot be computed from a stale value.
+    // completeSession itself ignores a second call on the same day.
+    const latest = await getProgress();
+    // Stamp the day the session was built for, so crossing midnight mid-session
+    // does not consume tomorrow without teaching its verb.
+    const updated = await completeSession(advanceProgress(latest), session?.date);
     setStreak(updated.currentStreak);
   }
 

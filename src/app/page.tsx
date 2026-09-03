@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Card from '@/components/ui/Card';
 import { getProgress, getTodayString } from '@/lib/storage';
 import { getWeekVerbs } from '@/data/verbs/dictionary';
+import { isCourseComplete } from '@/lib/session';
 import { UserProgress } from '@/lib/types';
 
 /**
@@ -32,6 +33,8 @@ export default function Home() {
   const weekVerbs = getWeekVerbs(progress.weekIndex);
   const { dayOfWeek, currentStreak } = progress;
   const isWeekTest = dayOfWeek > weekVerbs.length;
+  // Every verb taught: the course stays in review from here on.
+  const finished = isCourseComplete(progress);
 
   return (
     <div className="px-4 pt-6">
@@ -42,22 +45,28 @@ export default function Home() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-3xl shrink-0">
-                {doneToday ? '✅' : isWeekTest ? '🏁' : '⭐'}
+                {doneToday ? '✅' : finished ? '🎓' : isWeekTest ? '🏁' : '⭐'}
               </span>
               <div className="min-w-0">
                 <p className="font-semibold">
                   {doneToday
                     ? 'Done for today'
-                    : isWeekTest
-                      ? `Week ${progress.weekIndex + 1} test`
-                      : 'Start today’s verb'}
+                    : finished
+                      ? 'Daily review'
+                      : isWeekTest
+                        ? `Week ${progress.weekIndex + 1} test`
+                        : 'Start today’s verb'}
                 </p>
                 <p className="text-xs text-text-secondary">
                   {doneToday
-                    ? 'Next verb tomorrow'
-                    : isWeekTest
-                      ? `All ${weekVerbs.length} verbs from this week`
-                      : `Day ${dayOfWeek} of ${weekVerbs.length}`}
+                    ? finished
+                      ? 'Review again tomorrow'
+                      : 'Next verb tomorrow'
+                    : finished
+                      ? 'Every verb learned — keeping them sharp'
+                      : isWeekTest
+                        ? `All ${weekVerbs.length} verbs from this week`
+                        : `Day ${dayOfWeek} of ${weekVerbs.length}`}
                   {currentStreak > 0 && ` · 🔥 ${currentStreak}`}
                 </p>
               </div>
@@ -68,7 +77,9 @@ export default function Home() {
       </Link>
 
       <Card>
-        <h2 className="font-semibold mb-3">Week {progress.weekIndex + 1}</h2>
+        <h2 className="font-semibold mb-3">
+          {finished ? 'Final week' : `Week ${progress.weekIndex + 1}`}
+        </h2>
         <ol className="space-y-1.5">
           {weekVerbs.map((verb, i) => {
             const isToday = i === dayOfWeek - 1 && !isWeekTest;

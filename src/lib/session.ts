@@ -22,6 +22,12 @@ import { verbs, getWeekVerbs, getTotalWeeks, WEEK_LENGTH } from '@/data/verbs/di
  * an answer, as the reminder. The hook is scaffolding, not the answer.
  */
 
+/** Keeps a stored counter inside a usable range. */
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(Math.max(Math.trunc(value), min), max);
+}
+
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
   for (let i = out.length - 1; i > 0; i--) {
@@ -88,21 +94,38 @@ function buildQuestionsFor(
  *
  * Returns null while still in week 1, when there is no past week yet.
  */
-function getRotatedWeek(progress: UserProgress): number | null {
-  if (progress.weekIndex === 0) return null;
-  return progress.rotationIndex % progress.weekIndex;
+function getRotatedWeek(progress: UserProgress, weekIndex: number): number | null {
+  // Weeks before the current one are the pool — the current week is already
+  // being drilled today, so repeating it would waste the slot.
+  //
+  // Once the course is finished the state parks on the final week forever. If
+  // the pool stayed exclusive, that last week would be the only one never
+  // refreshed, so at that point it joins the rotation.
+  const pool = isCourseComplete(progress) ? weekIndex + 1 : weekIndex;
+  if (pool <= 0) return null;
+
+  const rotation = Number.isFinite(progress.rotationIndex)
+    ? Math.trunc(progress.rotationIndex)
+    : 0;
+  // Modulo of a negative number is negative in JS, which would index off the
+  // front of the dictionary.
+  return ((rotation % pool) + pool) % pool;
 }
 
 export function buildDailySession(progress: UserProgress, date: string): DailySession {
-  const { weekIndex } = progress;
+  // Clamp the stored position before using it. A blob that has been hand-edited,
+  // restored from an older version, or half-written can carry a week past the
+  // end of the dictionary or a day of 0 — neither should produce a broken
+  // session.
+  const weekIndex = clamp(progress.weekIndex, 0, getTotalWeeks() - 1);
   const weekVerbs = getWeekVerbs(weekIndex);
 
   // Day within the current week batch.
   //
-  // A week is WEEK_LENGTH + 1 sessions long: one per verb, then a test day that
-  // teaches nothing. Deriving this from the global dayIndex would drift by a
-  // day per week and eventually skip verbs, so it is tracked on its own.
-  const dayOfWeek = progress.dayOfWeek;
+  // A week is one session per verb plus a test day that teaches nothing.
+  // Deriving this from the global dayIndex would drift by a day per week and
+  // eventually skip verbs, so it is tracked on its own.
+  const dayOfWeek = clamp(progress.dayOfWeek, 1, weekVerbs.length + 1);
 
   // The test day is the one after the last verb of the week has been taught.
   // A short final week tests as soon as its verbs run out.
@@ -129,7 +152,7 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
   }
 
   // One past week cycled back in — single direction to keep the session short.
-  const rotated = getRotatedWeek(progress);
+  const rotated = getRotatedWeek(progress, weekIndex);
   if (rotated !== null) {
     const pastVerbs = getWeekVerbs(rotated);
     questions.push(...buildQuestionsFor(pastVerbs, 'past-week', progress, false));
@@ -155,24 +178,43 @@ export function advanceProgress(progress: UserProgress): {
   weekIndex: number;
   rotationIndex: number;
 } {
+  const lastWeek = getTotalWeeks() - 1;
+  const weekIndex = clamp(progress.weekIndex, 0, lastWeek);
+  const weekLength = getWeekVerbs(weekIndex).length;
+  const dayOfWeek = clamp(progress.dayOfWeek, 1, weekLength + 1);
+
   // The week ends after its test day, which is the session following the last
   // verb of that week.
-  const finishedWeek = progress.dayOfWeek > getWeekVerbs(progress.weekIndex).length;
-  const lastWeek = getTotalWeeks() - 1;
+  const finishedWeek = dayOfWeek > weekLength;
+
+  // Past the final week's test day there is nothing left to teach. Parking on
+  // the test day keeps every learned verb in review instead of wrapping back
+  // and re-teaching the last few verbs forever.
+  if (finishedWeek && weekIndex === lastWeek) {
+    return {
+      dayIndex: progress.dayIndex + 1,
+      dayOfWeek,
+      weekIndex,
+      rotationIndex: progress.rotationIndex + 1,
+    };
+  }
 
   return {
     dayIndex: progress.dayIndex + 1,
-    dayOfWeek: finishedWeek ? 1 : progress.dayOfWeek + 1,
-    weekIndex: finishedWeek
-      ? Math.min(progress.weekIndex + 1, lastWeek)
-      : progress.weekIndex,
+    dayOfWeek: finishedWeek ? 1 : dayOfWeek + 1,
+    weekIndex: finishedWeek ? weekIndex + 1 : weekIndex,
     rotationIndex: progress.rotationIndex + 1,
   };
 }
 
-/** True once every verb in the dictionary has been learned. */
+/**
+ * True once the final week's test day has been reached — every verb has been
+ * taught, and the course is now in permanent review.
+ */
 export function isCourseComplete(progress: UserProgress): boolean {
-  return progress.dayIndex > verbs.length + getTotalWeeks();
+  const lastWeek = getTotalWeeks() - 1;
+  if (progress.weekIndex < lastWeek) return false;
+  return progress.dayOfWeek > getWeekVerbs(lastWeek).length;
 }
 
 export { WEEK_LENGTH };

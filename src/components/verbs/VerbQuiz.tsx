@@ -121,6 +121,14 @@ export default function VerbQuiz({ questions, weekIndex, onComplete, newVerb }: 
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [current, answered, isCorrect, missed, handleSelect, goToNext]);
 
+  // A session with no questions has nothing to show; ending it immediately is
+  // better than a blank screen the user cannot leave.
+  useEffect(() => {
+    if (questions.length === 0) {
+      onComplete({ totalQuestions: 0, correctAnswers: 0, missed: [], newVerb });
+    }
+  }, [questions.length, onComplete, newVerb]);
+
   if (!current) return null;
 
   const prompt = current.direction === 'en-to-jp' ? current.verb.english : current.verb.masu;
