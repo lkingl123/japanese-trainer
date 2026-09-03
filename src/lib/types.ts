@@ -1,125 +1,95 @@
-// ===== Vocab Types =====
-export type JlptLevel = 'N5' | 'N4' | 'N3';
+// ===== Verb Types =====
 
-export type PartOfSpeech =
-  | 'noun'
-  | 'verb'
-  | 'i-adjective'
-  | 'na-adjective'
-  | 'adverb'
-  | 'particle'
-  | 'counter'
-  | 'expression'
-  | 'conjunction'
-  | 'prefix'
-  | 'suffix';
-
-export interface VocabWord {
+/**
+ * A single verb entry from the mnemonic dictionary.
+ *
+ * The mnemonic `code` is a two-letter abbreviation King already knows:
+ * letter 1 = first letter of the Japanese verb (romaji, -masu form),
+ * letter 2 = first letter of the English meaning. `connection` is the
+ * one-line hook that ties the code to the meaning.
+ *
+ * `code` and `connection` are null for entries with no good hook yet —
+ * per the method spec, a bad hook is worse than none.
+ */
+export interface Verb {
   id: string;
-  romaji: string;
-  japanese: string; // hidden from user, used for TTS
+  code: string | null;
+  masu: string; // romaji, -masu form (polite) — never dictionary/casual form
+  japanese: string; // kana/kanji, used for TTS only
   english: string;
-  category: string;
-  jlptLevel: JlptLevel;
-  partOfSpeech: PartOfSpeech;
+  connection: string | null;
 }
 
-export interface VocabCategory {
-  id: string;
-  name: string;
-  emoji: string;
-  jlptLevel: JlptLevel;
-  wordCount: number;
-}
+/** Which way a verb is being tested. */
+export type TestDirection =
+  | 'en-to-jp' // shown the English meaning, recall the -masu form
+  | 'jp-to-en'; // shown the -masu form, recall the English meaning
 
-// ===== Grammar Types =====
-export interface GrammarExample {
-  japanese: string; // for TTS
-  romaji: string;
-  english: string;
-}
+/** Where a question in today's session came from. */
+export type QuestionSource =
+  | 'new' // today's new verb, first exposure
+  | 'this-week' // an earlier day of the current week
+  | 'past-week' // the past week cycled back in rotation
+  | 'week-test'; // day 7 — the full week reviewed together
 
-export interface FillBlankExercise {
-  type: 'fill-blank';
-  sentence: string; // romaji with ___ for blank
-  answer: string;
-  options: string[];
-  english: string;
-}
-
-export interface SentenceBuildExercise {
-  type: 'sentence-build';
-  english: string;
-  words: string[]; // scrambled romaji words
-  answer: string[]; // correct order
-}
-
-export interface MultipleChoiceExercise {
-  type: 'multiple-choice';
-  question: string;
-  options: string[];
-  answer: string;
-  english: string;
-}
-
-export type GrammarExercise = FillBlankExercise | SentenceBuildExercise | MultipleChoiceExercise;
-
-export interface GrammarPattern {
-  id: string;
-  pattern: string; // romaji pattern name
-  meaning: string;
-  jlptLevel: JlptLevel;
-  explanation: string;
-  structure: string;
-  examples: GrammarExample[];
-  exercises: GrammarExercise[];
-}
-
-// ===== SRS Types =====
-export interface SrsCard {
-  wordId: string;
-  level: number; // 0-5
-  nextReview: string; // ISO date string
-  lastReviewed: string | null;
-  correctCount: number;
-  incorrectCount: number;
-}
-
-// ===== Progress Types =====
-export interface UserProgress {
-  xp: number;
-  level: number;
-  currentStreak: number;
-  longestStreak: number;
-  lastActiveDate: string; // YYYY-MM-DD
-  dailyChallengeDate: string | null; // last completed daily challenge date
-  vocabMastery: Record<string, SrsCard>; // wordId -> SrsCard
-  grammarMastery: Record<string, { completed: boolean; score: number }>; // patternId -> mastery
-  unlockedLevels: JlptLevel[];
-}
-
-// ===== Quiz Types =====
-export interface QuizQuestion {
-  id: string;
-  type: 'hear-pick-meaning' | 'see-english-pick-romaji';
-  word: VocabWord;
+export interface ReviewQuestion {
+  verb: Verb;
+  direction: TestDirection;
+  source: QuestionSource;
   options: string[];
   correctAnswer: string;
 }
 
-export interface QuizResult {
-  totalQuestions: number;
-  correctAnswers: number;
-  xpEarned: number;
-  isPerfect: boolean;
-  wrongWords: VocabWord[];
+// ===== Progress Types =====
+
+/**
+ * Per-verb memory record. `streak` is consecutive correct answers and drives
+ * the dud flag; a verb missed after being learned is worth resurfacing sooner.
+ */
+export interface VerbRecord {
+  verbId: string;
+  learnedOn: string; // YYYY-MM-DD, the day it was the new verb
+  weekIndex: number; // which week batch it belongs to (0-based)
+  correctCount: number;
+  incorrectCount: number;
+  streak: number;
+  lastTested: string | null; // YYYY-MM-DD
 }
 
-// ===== Daily Challenge Types =====
-export interface DailyChallenge {
+export interface UserProgress {
+  /** Day number in the overall course; day 1 is the first session ever. */
+  dayIndex: number;
+  /** Which week batch is currently being learned (0-based). */
+  weekIndex: number;
+  /**
+   * Day within the current week batch, starting at 1. A week runs one verb per
+   * day and then a test day, so this is tracked separately from dayIndex —
+   * deriving it from the running day count drifts and skips verbs.
+   */
+  dayOfWeek: number;
+  /** Which past week gets cycled into review next (0-based, rotates). */
+  rotationIndex: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: string; // YYYY-MM-DD
+  lastSessionDate: string | null; // last completed session
+  records: Record<string, VerbRecord>; // verbId -> record
+}
+
+// ===== Session Types =====
+
+export interface DailySession {
   date: string;
-  vocabQuestions: QuizQuestion[];
-  grammarExercises: GrammarExercise[];
-  completed: boolean;
-  score: number;
+  dayIndex: number;
+  dayOfWeek: number; // 1-7 within the current week batch
+  isWeekTest: boolean; // day 7 — full-week review
+  newVerb: Verb | null; // null on the week-test day
+  questions: ReviewQuestion[];
+}
+
+export interface SessionResult {
+  totalQuestions: number;
+  correctAnswers: number;
+  missed: Verb[];
+  newVerb: Verb | null;
 }

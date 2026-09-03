@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Verb Trainer
 
-## Getting Started
+One Japanese verb a day, learned with a mnemonic hook and re-tested until it sticks.
 
-First, run the development server:
+Built on the method in `docs/method.md`: every verb gets a two-letter code that is
+a real abbreviation you already know, with a connection tying it to the meaning.
+
+## The daily cycle
+
+| Day | What happens |
+|-----|--------------|
+| 1–6 | Learn **1 new verb**, then get re-tested on the earlier days of this week (both directions) |
+| 7 | No new verb — the **whole week** is tested together, both directions |
+| Every day | Plus **one past week** cycled back in on rotation |
+
+A session is roughly 14 questions and stays that size no matter how large the
+dictionary grows — past weeks rotate rather than all being tested every day.
+
+## Rules baked into the app
+
+- **-masu form only.** Every verb is polite form, never dictionary/casual. An
+  import-time guard in `src/data/verbs/dictionary.ts` throws if an entry's romaji
+  doesn't end in `masu` or its kana doesn't end in `ます`.
+- **The mnemonic is never the prompt.** Codes are shown when a verb is first
+  taught and revealed *after* an answer as the reminder — never as part of the
+  question. The hook is scaffolding.
+- **Blanks stay blank.** Verbs with no good hook show `—` rather than a forced
+  mnemonic. A bad hook is worse than none.
+
+## Content
+
+59 verbs — 8 weeks at one a day. 46 have codes, 13 are awaiting hooks.
+
+At one verb a day this is about **350 verbs a year**. The dictionary is the
+bottleneck, not the app; add new entries to `src/data/verbs/dictionary.ts` in
+course order.
+
+## Storage
+
+Everything lives in `localStorage` on the device — no accounts, no database, no
+network. Settings has export/restore so a streak can be backed up or moved.
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build
+npm test         # unit tests
+npm run test:coverage
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No environment variables required.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`npm test` covers the three places a bug would be silent:
 
-## Learn More
+- **`dictionary.test.ts`** — the method's rules as executable checks: -masu form,
+  unique ids/verbs/meanings/codes, every code grounded in its own connection,
+  and code/connection present or absent together.
+- **`session.test.ts`** — the scheduling. Walks the entire course day by day and
+  asserts every verb is taught exactly once in order, sessions stay bounded, and
+  the past-week rotation never repeats the week being learned.
+- **`storage.test.ts`** — streak arithmetic across day boundaries, and recovery
+  from corrupt, partial, or unwritable localStorage.
 
-To learn more about Next.js, take a look at the following resources:
+## Layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/
+    page.tsx          Home — today's card, streak, this week
+    today/            The session: learn → quiz → result
+    dictionary/       All verbs, searchable, with per-verb accuracy
+    stats/            Streak, recall, and the dud list
+    settings/         Export / restore / reset
+  components/verbs/   VerbLearn, VerbQuiz, SessionResult
+  data/verbs/         The dictionary + the -masu guard
+  lib/
+    session.ts        Builds the day's session; the scheduling rules
+    storage.ts        localStorage progress
+```

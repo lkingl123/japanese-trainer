@@ -3,8 +3,8 @@ import "./globals.css";
 import BottomNav from "@/components/layout/BottomNav";
 
 export const metadata: Metadata = {
-  title: "Nihongo Trainer",
-  description: "Japanese fluency trainer — N5 to N3",
+  title: "Verb Trainer",
+  description: "One Japanese verb a day, with mnemonics",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Nihongo",
+    title: "Verbs",
   },
 };
 
@@ -22,7 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#7c6bea",
+  themeColor: "#5b4bc4",
 };
 
 export default function RootLayout({
@@ -33,9 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <div className="max-w-lg mx-auto min-h-screen pb-nav">
+        <main className="max-w-lg mx-auto min-h-screen pb-nav">
           {children}
-        </div>
+        </main>
         <BottomNav />
       </body>
     </html>

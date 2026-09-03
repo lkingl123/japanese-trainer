@@ -1,131 +1,141 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Card from '@/components/ui/Card';
-import ProgressBar from '@/components/ui/ProgressBar';
 import Badge from '@/components/ui/Badge';
+import ProgressBar from '@/components/ui/ProgressBar';
+import AudioButton from '@/components/ui/AudioButton';
 import { getProgress } from '@/lib/storage';
-import { calculateLevel, getLevelTitle } from '@/lib/xp';
+import { verbs, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
 export default function StatsPage() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
 
-  useEffect(() => { getProgress().then(setProgress); }, []);
+  useEffect(() => {
+    getProgress().then(setProgress);
+  }, []);
 
-  if (!progress) return <div className="flex items-center justify-center min-h-screen text-text-secondary">Loading...</div>;
+  if (!progress) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-text-secondary">
+        Loading…
+      </div>
+    );
+  }
 
-  const levelInfo = calculateLevel(progress.xp);
-  const vocabCards = Object.values(progress.vocabMastery);
-  const grammarEntries = Object.values(progress.grammarMastery);
-  const vocabByLevel = {
-    new: vocabCards.filter((c) => c.level === 0).length,
-    learning: vocabCards.filter((c) => c.level >= 1 && c.level <= 2).length,
-    known: vocabCards.filter((c) => c.level >= 3 && c.level <= 4).length,
-    mastered: vocabCards.filter((c) => c.level === 5).length,
-  };
-  const totalStudied = vocabCards.length;
-  const totalCorrect = vocabCards.reduce((sum, c) => sum + c.correctCount, 0);
-  const totalIncorrect = vocabCards.reduce((sum, c) => sum + c.incorrectCount, 0);
-  const accuracy = totalCorrect + totalIncorrect > 0 ? Math.round((totalCorrect / (totalCorrect + totalIncorrect)) * 100) : 0;
-  const grammarCompleted = grammarEntries.filter((g) => g.completed).length;
-  const grammarAvgScore = grammarEntries.length > 0 ? Math.round(grammarEntries.reduce((sum, g) => sum + g.score, 0) / grammarEntries.length) : 0;
-  const today = new Date().toISOString().split('T')[0];
-  const dueForReview = vocabCards.filter((c) => c.nextReview <= today).length;
+  const records = Object.values(progress.records);
+  const learned = records.length;
+  const totalCorrect = records.reduce((s, r) => s + r.correctCount, 0);
+  const totalWrong = records.reduce((s, r) => s + r.incorrectCount, 0);
+  const answers = totalCorrect + totalWrong;
+  const accuracy = answers > 0 ? Math.round((totalCorrect / answers) * 100) : 0;
+
+  // Solid = 3+ correct in a row. Anything with a broken streak and a miss on
+  // record is what the method says to replace the hook for.
+  const solid = records.filter((r) => r.streak >= 3).length;
+  const shaky = records.filter((r) => r.streak > 0 && r.streak < 3).length;
+  const needsWork = records
+    .filter((r) => r.incorrectCount > 0 && r.streak === 0)
+    .sort((a, b) => b.incorrectCount - a.incorrectCount);
+
+  const weeksLeft = Math.ceil((verbs.length - learned) / WEEK_LENGTH);
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-2xl font-bold mb-1">Statistics</h1>
-      <p className="text-text-secondary text-sm mb-6">Track your learning progress</p>
-
-      <Card className="mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm text-text-secondary">Level {levelInfo.level}</p>
-            <p className="text-xl font-bold">{getLevelTitle(levelInfo.level)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-primary">{progress.xp}</p>
-            <p className="text-xs text-text-secondary">Total XP</p>
-          </div>
-        </div>
-        <ProgressBar value={(levelInfo.xpInLevel / levelInfo.xpForNext) * 100} />
-        <p className="text-xs text-text-secondary mt-1">{levelInfo.xpInLevel}/{levelInfo.xpForNext} XP to level {levelInfo.level + 1}</p>
-      </Card>
+      <h1 className="text-2xl font-bold mb-5">Stats</h1>
 
       <Card className="mb-4">
         <div className="flex items-center justify-around text-center">
           <div>
-            <span className="text-3xl block">🔥</span>
-            <p className="text-2xl font-bold mt-1">{progress.currentStreak}</p>
-            <p className="text-xs text-text-secondary">Current Streak</p>
+            <p className="text-2xl font-bold">🔥 {progress.currentStreak}</p>
+            <p className="text-xs text-text-secondary mt-0.5">Streak</p>
           </div>
-          <div className="w-px h-12 bg-black/10" />
+          <div className="w-px h-10 bg-black/10" />
           <div>
-            <span className="text-3xl block">🏆</span>
-            <p className="text-2xl font-bold mt-1">{progress.longestStreak}</p>
-            <p className="text-xs text-text-secondary">Best Streak</p>
+            <p className="text-2xl font-bold">{progress.longestStreak}</p>
+            <p className="text-xs text-text-secondary mt-0.5">Best</p>
+          </div>
+          <div className="w-px h-10 bg-black/10" />
+          <div>
+            <p className="text-2xl font-bold">{accuracy}%</p>
+            <p className="text-xs text-text-secondary mt-0.5">Accuracy</p>
           </div>
         </div>
       </Card>
 
       <Card className="mb-4">
-        <h3 className="font-semibold mb-3">📚 Vocabulary</h3>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-primary/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-primary">{totalStudied}</p>
-            <p className="text-xs text-text-secondary">Words Studied</p>
-          </div>
-          <div className="bg-success/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-success">{accuracy}%</p>
-            <p className="text-xs text-text-secondary">Accuracy</p>
-          </div>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-semibold">
+            {learned} of {verbs.length} verbs
+          </h2>
+          <Badge variant="primary">Week {progress.weekIndex + 1}</Badge>
         </div>
-        {dueForReview > 0 && (
-          <div className="bg-warning/5 rounded-xl p-3 mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium">Words due for review</span>
-            <Badge variant="warning">{dueForReview}</Badge>
-          </div>
-        )}
-        <div className="space-y-2">
-          {[['New', vocabByLevel.new], ['Learning', vocabByLevel.learning], ['Known', vocabByLevel.known], ['Mastered', vocabByLevel.mastered]].map(([label, count]) => (
-            <div key={label as string} className="flex items-center justify-between text-sm">
-              <span className="text-text-secondary">{label}</span>
-              <span className={`font-medium ${label === 'Mastered' ? 'text-success' : ''}`}>{count as number}</span>
-            </div>
-          ))}
-        </div>
+        <ProgressBar value={(learned / verbs.length) * 100} className="mb-2" />
+        <p className="text-xs text-text-secondary">
+          {learned === verbs.length
+            ? 'Every verb learned.'
+            : `${weeksLeft} ${weeksLeft === 1 ? 'week' : 'weeks'} to go · ${answers} answers so far`}
+        </p>
       </Card>
 
-      <Card className="mb-4">
-        <h3 className="font-semibold mb-3">✏️ Grammar</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-primary/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-primary">{grammarCompleted}</p>
-            <p className="text-xs text-text-secondary">Patterns Practiced</p>
+      {learned === 0 ? (
+        <Card>
+          <p className="text-sm text-text-secondary text-center py-2">
+            Recall stats appear once you’ve done a session.
+          </p>
+        </Card>
+      ) : (
+        <Card>
+          <div className="flex items-center gap-4 mb-4 text-sm">
+            <span className="text-success font-medium">{solid} solid</span>
+            <span className="text-warning font-medium">{shaky} shaky</span>
+            <span className="text-error font-medium">{needsWork.length} need work</span>
           </div>
-          <div className="bg-success/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-success">{grammarAvgScore}%</p>
-            <p className="text-xs text-text-secondary">Avg Score</p>
-          </div>
-        </div>
-      </Card>
 
-      <Card>
-        <h3 className="font-semibold mb-3">🎌 JLPT Progress</h3>
-        {(['N5', 'N4', 'N3'] as const).map((level) => {
-          const unlocked = progress.unlockedLevels.includes(level);
-          return (
-            <div key={level} className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
-              <div className="flex items-center gap-2">
-                <span>{unlocked ? '🔓' : '🔒'}</span>
-                <span className={unlocked ? 'font-medium' : 'text-text-secondary'}>{level}</span>
-              </div>
-              <Badge variant={unlocked ? 'success' : 'default'}>{unlocked ? 'Unlocked' : 'Locked'}</Badge>
-            </div>
-          );
-        })}
-      </Card>
+          {needsWork.length === 0 ? (
+            <p className="text-sm text-text-secondary">
+              Nothing is slipping right now.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-text-secondary mb-3">
+                Missed most often — replace the hook rather than drilling a bad one.
+              </p>
+              <ul className="space-y-2">
+                {needsWork.slice(0, 8).map((record) => {
+                  const verb = getVerbById(record.verbId);
+                  if (!verb) return null;
+                  return (
+                    <li key={record.verbId} className="flex items-center gap-2.5">
+                      {verb.code && (
+                        <span className="px-2 py-1 rounded-md bg-error/10 text-error text-xs font-bold shrink-0">
+                          {verb.code}
+                        </span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{verb.masu}</p>
+                        <p className="text-xs text-text-secondary truncate">{verb.english}</p>
+                      </div>
+                      <span className="text-xs text-error shrink-0">
+                        ✕ {record.incorrectCount}
+                      </span>
+                      <AudioButton japanese={verb.japanese} size="sm" />
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </Card>
+      )}
+
+      <Link href="/settings">
+        <p className="text-center text-xs text-text-secondary py-6 underline">
+          Backup &amp; settings
+        </p>
+      </Link>
     </div>
   );
 }
