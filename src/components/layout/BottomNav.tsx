@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 
 const tabs = [
   { href: '/', label: 'Home', emoji: '🏠' },
-  { href: '/vocab', label: 'Vocab', emoji: '📚' },
-  { href: '/grammar', label: 'Grammar', emoji: '✏️' },
+  { href: '/today', label: 'Today', emoji: '⭐' },
+  { href: '/dictionary', label: 'Verbs', emoji: '📖' },
   { href: '/stats', label: 'Stats', emoji: '📊' },
 ];
 

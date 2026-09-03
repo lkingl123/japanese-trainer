@@ -3,8 +3,8 @@ import "./globals.css";
 import BottomNav from "@/components/layout/BottomNav";
 
 export const metadata: Metadata = {
-  title: "Nihongo Trainer",
-  description: "Japanese fluency trainer — N5 to N3",
+  title: "Verb Trainer",
+  description: "One Japanese verb a day, with mnemonics",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Nihongo",
+    title: "Verbs",
   },
 };
 

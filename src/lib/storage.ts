@@ -1,276 +1,240 @@
 'use client';
 
-import { UserProgress, SrsCard, JlptLevel } from './types';
+import { UserProgress, VerbRecord } from './types';
 import { supabase } from './supabase';
 
 const DEFAULT_PROGRESS: UserProgress = {
-  xp: 0,
-  level: 1,
+  dayIndex: 1,
+  weekIndex: 0,
+  rotationIndex: 0,
   currentStreak: 0,
   longestStreak: 0,
   lastActiveDate: '',
-  dailyChallengeDate: null,
-  vocabMastery: {},
-  grammarMastery: {},
-  unlockedLevels: ['N5'],
+  lastSessionDate: null,
+  records: {},
 };
 
-// ===== Core Progress (jt_progress — single row) =====
+/**
+ * In-memory cache of the whole progress object.
+ *
+ * The previous version re-fetched from Supabase before every single write,
+ * which made answering a question wait on a network round-trip and was the
+ * root of the "question gets stuck" bugs. Here the client owns the state:
+ * reads hit the cache, writes update the cache immediately and push to
+ * Supabase in the background.
+ */
+let cache: UserProgress | null = null;
+let rowId: string | null = null;
+let loading: Promise<UserProgress> | null = null;
 
-async function getProgressRow(): Promise<{ id: string; data: Omit<UserProgress, 'vocabMastery' | 'grammarMastery'> }> {
-  const { data, error } = await supabase
-    .from('jt_progress')
-    .select('*')
-    .limit(1)
-    .single();
+// ===== Date helpers =====
 
-  if (error || !data) {
-    // Create default row if none exists
-    const { data: created, error: insertErr } = await supabase
-      .from('jt_progress')
-      .insert({})
-      .select()
-      .single();
-    if (insertErr || !created) {
-      console.error('Failed to create progress row:', insertErr);
-      return { id: '', data: { ...DEFAULT_PROGRESS } };
-    }
-    return {
-      id: created.id,
-      data: {
-        xp: 0, level: 1, currentStreak: 0, longestStreak: 0,
-        lastActiveDate: '', dailyChallengeDate: null, unlockedLevels: ['N5'],
-      },
-    };
-  }
-
-  return {
-    id: data.id,
-    data: {
-      xp: data.xp,
-      level: data.level,
-      currentStreak: data.current_streak,
-      longestStreak: data.longest_streak,
-      lastActiveDate: data.last_active_date,
-      dailyChallengeDate: data.daily_challenge_date,
-      unlockedLevels: data.unlocked_levels,
-    },
-  };
-}
-
-async function getVocabMasteryMap(): Promise<Record<string, SrsCard>> {
-  const { data, error } = await supabase.from('jt_vocab_mastery').select('*');
-  if (error) { console.error('Failed to fetch vocab mastery:', error); return {}; }
-  if (!data) return {};
-  const map: Record<string, SrsCard> = {};
-  for (const row of data) {
-    map[row.word_id] = {
-      wordId: row.word_id,
-      level: row.srs_level,
-      nextReview: row.next_review,
-      lastReviewed: row.last_reviewed,
-      correctCount: row.correct_count,
-      incorrectCount: row.incorrect_count,
-    };
-  }
-  return map;
-}
-
-async function getGrammarMasteryMap(): Promise<Record<string, { completed: boolean; score: number }>> {
-  const { data, error } = await supabase.from('jt_grammar_mastery').select('*');
-  if (error) { console.error('Failed to fetch grammar mastery:', error); return {}; }
-  if (!data) return {};
-  const map: Record<string, { completed: boolean; score: number }> = {};
-  for (const row of data) {
-    map[row.pattern_id] = { completed: row.completed, score: row.score };
-  }
-  return map;
-}
-
-export async function getProgress(): Promise<UserProgress> {
-  const [progressRow, vocabMastery, grammarMastery] = await Promise.all([
-    getProgressRow(),
-    getVocabMasteryMap(),
-    getGrammarMasteryMap(),
-  ]);
-  const data = progressRow.data;
-
-  // Reset streak if the user missed a day. lastActiveDate is only updated on
-  // activity, so a stored streak silently stays valid forever otherwise.
-  const today = getTodayString();
-  const yesterday = getYesterdayString();
-  const stale =
-    data.currentStreak > 0 &&
-    data.lastActiveDate !== '' &&
-    data.lastActiveDate !== today &&
-    data.lastActiveDate !== yesterday;
-  if (stale) {
-    await updateProgressFields({ current_streak: 0 });
-    return { ...data, currentStreak: 0, vocabMastery, grammarMastery };
-  }
-
-  return { ...data, vocabMastery, grammarMastery };
-}
-
-async function updateProgressFields(fields: Record<string, unknown>): Promise<void> {
-  const row = await getProgressRow();
-  const { error } = await supabase
-    .from('jt_progress')
-    .update({ ...fields, updated_at: new Date().toISOString() })
-    .eq('id', row.id);
-  if (error) console.error('Failed to update progress:', error);
-}
-
-// ===== XP & Streak Helpers =====
-
-export async function addXp(amount: number): Promise<UserProgress> {
-  const progress = await getProgress();
-  const newXp = progress.xp + amount;
-  const { level: newLevel } = calculateLevel(newXp);
-  await updateProgressFields({ xp: newXp, level: newLevel });
-  return { ...progress, xp: newXp, level: newLevel };
-}
-
-export async function updateStreak(): Promise<UserProgress> {
-  const progress = await getProgress();
-  const today = getTodayString();
-  const yesterday = getYesterdayString();
-
-  if (progress.lastActiveDate === today) return progress;
-
-  let newStreak = 1;
-  if (progress.lastActiveDate === yesterday) {
-    newStreak = progress.currentStreak + 1;
-  }
-
-  const longestStreak = Math.max(progress.longestStreak, newStreak);
-  await updateProgressFields({
-    current_streak: newStreak,
-    longest_streak: longestStreak,
-    last_active_date: today,
-  });
-  return { ...progress, currentStreak: newStreak, longestStreak, lastActiveDate: today };
-}
-
-// ===== SRS Helpers =====
-
-const SRS_INTERVALS = [0, 1, 3, 7, 14, 30];
-
-export async function getVocabCard(wordId: string): Promise<SrsCard | undefined> {
-  const { data } = await supabase
-    .from('jt_vocab_mastery')
-    .select('*')
-    .eq('word_id', wordId)
-    .maybeSingle();
-  if (!data) return undefined;
-  return {
-    wordId: data.word_id,
-    level: data.srs_level,
-    nextReview: data.next_review,
-    lastReviewed: data.last_reviewed,
-    correctCount: data.correct_count,
-    incorrectCount: data.incorrect_count,
-  };
-}
-
-export async function updateVocabCard(wordId: string, correct: boolean): Promise<void> {
-  const existing = await getVocabCard(wordId);
-  const card = existing || {
-    wordId,
-    level: 0,
-    nextReview: getTodayString(),
-    lastReviewed: null,
-    correctCount: 0,
-    incorrectCount: 0,
-  };
-
-  const newLevel = correct
-    ? Math.min(card.level + 1, 5)
-    : Math.max(card.level - 1, 0);
-
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + SRS_INTERVALS[newLevel]);
-  const nextReview = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(nextDate.getDate()).padStart(2, '0')}`;
-
-  const { error } = await supabase.from('jt_vocab_mastery').upsert({
-    word_id: wordId,
-    srs_level: newLevel,
-    next_review: nextReview,
-    last_reviewed: getTodayString(),
-    correct_count: card.correctCount + (correct ? 1 : 0),
-    incorrect_count: card.incorrectCount + (correct ? 0 : 1),
-  }, { onConflict: 'word_id' });
-  if (error) console.error('Failed to update vocab card:', error);
-}
-
-// ===== Grammar Mastery =====
-
-export async function updateGrammarMastery(patternId: string, score: number): Promise<void> {
-  const { error } = await supabase.from('jt_grammar_mastery').upsert({
-    pattern_id: patternId,
-    completed: true,
-    score,
-  }, { onConflict: 'pattern_id' });
-  if (error) console.error('Failed to update grammar mastery:', error);
-}
-
-// ===== Level Unlock =====
-
-export async function unlockLevel(level: JlptLevel): Promise<void> {
-  const progress = await getProgress();
-  if (progress.unlockedLevels.includes(level)) return;
-  await updateProgressFields({
-    unlocked_levels: [...progress.unlockedLevels, level],
-  });
-}
-
-export async function isLevelUnlocked(level: JlptLevel): Promise<boolean> {
-  const progress = await getProgress();
-  return progress.unlockedLevels.includes(level);
-}
-
-// ===== Daily Challenge =====
-
-export async function markDailyChallengeComplete(): Promise<void> {
-  await updateProgressFields({ daily_challenge_date: getTodayString() });
-}
-
-export async function isDailyChallengeComplete(): Promise<boolean> {
-  const progress = await getProgress();
-  return progress.dailyChallengeDate === getTodayString();
-}
-
-// ===== Level Calculation =====
-
-export function calculateLevel(xp: number): { level: number; xpInLevel: number; xpForNext: number } {
-  let remaining = xp;
-  let level = 1;
-
-  while (true) {
-    const threshold = getXpThreshold(level);
-    if (remaining < threshold) {
-      return { level, xpInLevel: remaining, xpForNext: threshold };
-    }
-    remaining -= threshold;
-    level++;
-  }
-}
-
-function getXpThreshold(level: number): number {
-  if (level <= 10) return 100;
-  if (level <= 25) return 150;
-  return 200;
-}
-
-// ===== Date Helpers =====
-
-function getTodayString(): string {
-  const d = new Date();
+function toDateString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function getTodayString(): string {
+  return toDateString(new Date());
 }
 
 function getYesterdayString(): string {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return toDateString(d);
+}
+
+// ===== Loading =====
+
+async function fetchProgress(): Promise<UserProgress> {
+  const [progressRes, recordsRes] = await Promise.all([
+    supabase.from('jt_verb_progress').select('*').limit(1).maybeSingle(),
+    supabase.from('jt_verb_records').select('*'),
+  ]);
+
+  let row = progressRes.data;
+
+  if (!row) {
+    const { data: created, error } = await supabase
+      .from('jt_verb_progress')
+      .insert({})
+      .select()
+      .single();
+    if (error || !created) {
+      console.error('Failed to create progress row:', error);
+      return { ...DEFAULT_PROGRESS };
+    }
+    row = created;
+  }
+
+  rowId = row.id;
+
+  const records: Record<string, VerbRecord> = {};
+  for (const r of recordsRes.data ?? []) {
+    records[r.verb_id] = {
+      verbId: r.verb_id,
+      learnedOn: r.learned_on,
+      weekIndex: r.week_index,
+      correctCount: r.correct_count,
+      incorrectCount: r.incorrect_count,
+      streak: r.streak,
+      lastTested: r.last_tested,
+    };
+  }
+
+  const progress: UserProgress = {
+    dayIndex: row.day_index,
+    weekIndex: row.week_index,
+    rotationIndex: row.rotation_index,
+    currentStreak: row.current_streak,
+    longestStreak: row.longest_streak,
+    lastActiveDate: row.last_active_date ?? '',
+    lastSessionDate: row.last_session_date,
+    records,
+  };
+
+  // A stored streak stays valid forever unless it is expired on read —
+  // lastActiveDate only moves on activity.
+  const today = getTodayString();
+  const yesterday = getYesterdayString();
+  const stale =
+    progress.currentStreak > 0 &&
+    progress.lastActiveDate !== '' &&
+    progress.lastActiveDate !== today &&
+    progress.lastActiveDate !== yesterday;
+
+  if (stale) {
+    progress.currentStreak = 0;
+    void pushProgressFields({ current_streak: 0 });
+  }
+
+  return progress;
+}
+
+/** Loads progress once and caches it. Concurrent callers share one request. */
+export async function getProgress(): Promise<UserProgress> {
+  if (cache) return cache;
+  if (!loading) {
+    loading = fetchProgress().then((p) => {
+      cache = p;
+      loading = null;
+      return p;
+    });
+  }
+  return loading;
+}
+
+/** The cached progress without a fetch, or null if not loaded yet. */
+export function getCachedProgress(): UserProgress | null {
+  return cache;
+}
+
+// ===== Writes (cache-first, network in background) =====
+
+async function pushProgressFields(fields: Record<string, unknown>): Promise<void> {
+  if (!rowId) {
+    await getProgress();
+    if (!rowId) return;
+  }
+  const { error } = await supabase
+    .from('jt_verb_progress')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', rowId);
+  if (error) console.error('Failed to update progress:', error);
+}
+
+/**
+ * Records one answer. Updates the cache synchronously so the UI can advance
+ * immediately, and writes to Supabase in the background.
+ */
+export function recordAnswer(
+  verbId: string,
+  correct: boolean,
+  weekIndex: number
+): void {
+  if (!cache) return;
+  const today = getTodayString();
+
+  const existing = cache.records[verbId];
+  const record: VerbRecord = existing
+    ? {
+        ...existing,
+        correctCount: existing.correctCount + (correct ? 1 : 0),
+        incorrectCount: existing.incorrectCount + (correct ? 0 : 1),
+        streak: correct ? existing.streak + 1 : 0,
+        lastTested: today,
+      }
+    : {
+        verbId,
+        learnedOn: today,
+        weekIndex,
+        correctCount: correct ? 1 : 0,
+        incorrectCount: correct ? 0 : 1,
+        streak: correct ? 1 : 0,
+        lastTested: today,
+      };
+
+  cache.records[verbId] = record;
+
+  void supabase
+    .from('jt_verb_records')
+    .upsert(
+      {
+        verb_id: record.verbId,
+        learned_on: record.learnedOn,
+        week_index: record.weekIndex,
+        correct_count: record.correctCount,
+        incorrect_count: record.incorrectCount,
+        streak: record.streak,
+        last_tested: record.lastTested,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'verb_id' }
+    )
+    .then(({ error }) => {
+      if (error) console.error('Failed to save verb record:', error);
+    });
+}
+
+/** Marks today's session done: advances the course and extends the streak. */
+export async function completeSession(next: {
+  dayIndex: number;
+  weekIndex: number;
+  rotationIndex: number;
+}): Promise<UserProgress> {
+  const progress = await getProgress();
+  const today = getTodayString();
+  const yesterday = getYesterdayString();
+
+  // Only extend the streak on the first session of a day.
+  let currentStreak = progress.currentStreak;
+  if (progress.lastActiveDate !== today) {
+    currentStreak = progress.lastActiveDate === yesterday ? currentStreak + 1 : 1;
+  }
+  const longestStreak = Math.max(progress.longestStreak, currentStreak);
+
+  Object.assign(progress, {
+    ...next,
+    currentStreak,
+    longestStreak,
+    lastActiveDate: today,
+    lastSessionDate: today,
+  });
+
+  await pushProgressFields({
+    day_index: next.dayIndex,
+    week_index: next.weekIndex,
+    rotation_index: next.rotationIndex,
+    current_streak: currentStreak,
+    longest_streak: longestStreak,
+    last_active_date: today,
+    last_session_date: today,
+  });
+
+  return progress;
+}
+
+/** True if today's session is already done. */
+export async function isSessionCompleteToday(): Promise<boolean> {
+  const progress = await getProgress();
+  return progress.lastSessionDate === getTodayString();
 }

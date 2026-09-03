@@ -3,56 +3,67 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
-import ProgressBar from '@/components/ui/ProgressBar';
 import Badge from '@/components/ui/Badge';
-import { getProgress, isDailyChallengeComplete, updateStreak } from '@/lib/storage';
-import { calculateLevel, getLevelTitle } from '@/lib/xp';
+import ProgressBar from '@/components/ui/ProgressBar';
+import { getProgress, getTodayString } from '@/lib/storage';
+import { WEEK_LENGTH } from '@/lib/session';
+import { verbs, getWeekVerbs } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
 export default function Home() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [dailyDone, setDailyDone] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      await updateStreak();
-      const [p, done] = await Promise.all([getProgress(), isDailyChallengeComplete()]);
-      setProgress(p);
-      setDailyDone(done);
-    }
-    load();
+    getProgress().then(setProgress);
   }, []);
 
   if (!progress) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-2xl">🌸</div>
+        <div className="text-3xl gentle-pulse">🌸</div>
       </div>
     );
   }
 
-  const levelInfo = calculateLevel(progress.xp);
+  const doneToday = progress.lastSessionDate === getTodayString();
+  const dayOfWeek = ((progress.dayIndex - 1) % WEEK_LENGTH) + 1;
+  const isWeekTest = dayOfWeek === WEEK_LENGTH;
+  const weekVerbs = getWeekVerbs(progress.weekIndex);
+  const learned = Object.keys(progress.records).length;
 
   return (
     <div className="px-4 pt-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Nihongo Trainer</h1>
-        <p className="text-text-secondary text-sm">Your path to Japanese fluency 🌸</p>
+        <h1 className="text-2xl font-bold">Verb Trainer</h1>
+        <p className="text-text-secondary text-sm">One verb a day 🌸</p>
       </div>
 
-      <Card className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <p className="text-sm text-text-secondary">Level {levelInfo.level}</p>
-            <p className="text-lg font-bold">{getLevelTitle(levelInfo.level)}</p>
+      <Link href="/today">
+        <Card className={`mb-4 ${!doneToday ? 'border-2 border-primary' : ''}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{doneToday ? '✅' : isWeekTest ? '🏁' : '⭐'}</span>
+              <div>
+                <p className="font-semibold">
+                  {doneToday
+                    ? 'Done for today'
+                    : isWeekTest
+                      ? `Week ${progress.weekIndex + 1} test`
+                      : "Today's verb"}
+                </p>
+                <p className="text-xs text-text-secondary">
+                  {doneToday
+                    ? 'Back tomorrow for the next one'
+                    : isWeekTest
+                      ? 'All 7 verbs, both directions'
+                      : `Day ${dayOfWeek} of 7 · learn 1 + review`}
+                </p>
+              </div>
+            </div>
+            <span className="text-text-secondary">→</span>
           </div>
-          <Badge variant="primary">{levelInfo.jlptLevel}</Badge>
-        </div>
-        <ProgressBar value={(levelInfo.xpInLevel / levelInfo.xpForNext) * 100} showLabel />
-        <p className="text-xs text-text-secondary mt-1">
-          {levelInfo.xpInLevel}/{levelInfo.xpForNext} XP to next level
-        </p>
-      </Card>
+        </Card>
+      </Link>
 
       <Card className="mb-4">
         <div className="flex items-center justify-between">
@@ -70,67 +81,60 @@ export default function Home() {
         </div>
       </Card>
 
-      <Link href="/challenge">
-        <Card className={`mb-4 ${!dailyDone ? 'border-2 border-primary' : ''}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{dailyDone ? '✅' : '⭐'}</span>
-              <div>
-                <p className="font-semibold">Daily Challenge</p>
-                <p className="text-xs text-text-secondary">
-                  {dailyDone ? 'Completed for today!' : '5 vocab + 2 grammar — earn 50 XP'}
-                </p>
-              </div>
-            </div>
-            <span className="text-text-secondary">→</span>
-          </div>
-        </Card>
-      </Link>
-
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Link href="/vocab">
-          <Card>
-            <div className="text-center py-2">
-              <span className="text-3xl block mb-2">📚</span>
-              <p className="font-semibold text-sm">Vocabulary</p>
-              <p className="text-xs text-text-secondary">
-                {Object.keys(progress.vocabMastery).length} words studied
-              </p>
-            </div>
-          </Card>
-        </Link>
-        <Link href="/grammar">
-          <Card>
-            <div className="text-center py-2">
-              <span className="text-3xl block mb-2">✏️</span>
-              <p className="font-semibold text-sm">Grammar</p>
-              <p className="text-xs text-text-secondary">
-                {Object.keys(progress.grammarMastery).length} patterns learned
-              </p>
-            </div>
-          </Card>
-        </Link>
-      </div>
-
-      <Card>
-        <h3 className="font-semibold mb-3">JLPT Progress</h3>
-        <div className="space-y-2">
-          {(['N5', 'N4', 'N3'] as const).map((level) => {
-            const unlocked = progress.unlockedLevels.includes(level);
+      <Card className="mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Week {progress.weekIndex + 1}</h3>
+          <Badge variant="primary">
+            {learned} / {verbs.length} verbs
+          </Badge>
+        </div>
+        <ProgressBar value={(learned / verbs.length) * 100} className="mb-4" />
+        <div className="space-y-1.5">
+          {weekVerbs.map((verb, i) => {
+            const seen = !!progress.records[verb.id];
+            const isToday = i === dayOfWeek - 1 && !isWeekTest;
             return (
-              <div key={level} className="flex items-center justify-between py-1">
-                <div className="flex items-center gap-2">
-                  <span>{unlocked ? '🔓' : '🔒'}</span>
-                  <span className={unlocked ? 'font-medium' : 'text-text-secondary'}>{level}</span>
-                </div>
-                <Badge variant={unlocked ? 'success' : 'default'}>
-                  {unlocked ? 'Unlocked' : 'Locked'}
-                </Badge>
+              <div key={verb.id} className="flex items-center gap-2.5 text-sm">
+                <span className="w-5 shrink-0 text-center">
+                  {seen ? '✓' : isToday ? '→' : '·'}
+                </span>
+                {seen || isToday ? (
+                  <>
+                    {verb.code && (
+                      <span className="text-xs font-bold text-primary w-6">{verb.code}</span>
+                    )}
+                    <span className={seen ? '' : 'font-semibold'}>{verb.masu}</span>
+                    <span className="text-text-secondary text-xs truncate">{verb.english}</span>
+                  </>
+                ) : (
+                  <span className="text-text-secondary">Day {i + 1}</span>
+                )}
               </div>
             );
           })}
         </div>
       </Card>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/dictionary">
+          <Card>
+            <div className="text-center py-2">
+              <span className="text-3xl block mb-2">📖</span>
+              <p className="font-semibold text-sm">Dictionary</p>
+              <p className="text-xs text-text-secondary">{verbs.length} verbs</p>
+            </div>
+          </Card>
+        </Link>
+        <Link href="/stats">
+          <Card>
+            <div className="text-center py-2">
+              <span className="text-3xl block mb-2">📊</span>
+              <p className="font-semibold text-sm">Stats</p>
+              <p className="text-xs text-text-secondary">{learned} learned</p>
+            </div>
+          </Card>
+        </Link>
+      </div>
     </div>
   );
 }

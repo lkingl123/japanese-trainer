@@ -2,130 +2,142 @@
 
 import { useEffect, useState } from 'react';
 import Card from '@/components/ui/Card';
-import ProgressBar from '@/components/ui/ProgressBar';
 import Badge from '@/components/ui/Badge';
+import ProgressBar from '@/components/ui/ProgressBar';
 import { getProgress } from '@/lib/storage';
-import { calculateLevel, getLevelTitle } from '@/lib/xp';
+import { verbs, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
 export default function StatsPage() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
 
-  useEffect(() => { getProgress().then(setProgress); }, []);
+  useEffect(() => {
+    getProgress().then(setProgress);
+  }, []);
 
-  if (!progress) return <div className="flex items-center justify-center min-h-screen text-text-secondary">Loading...</div>;
+  if (!progress) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-text-secondary">
+        Loading…
+      </div>
+    );
+  }
 
-  const levelInfo = calculateLevel(progress.xp);
-  const vocabCards = Object.values(progress.vocabMastery);
-  const grammarEntries = Object.values(progress.grammarMastery);
-  const vocabByLevel = {
-    new: vocabCards.filter((c) => c.level === 0).length,
-    learning: vocabCards.filter((c) => c.level >= 1 && c.level <= 2).length,
-    known: vocabCards.filter((c) => c.level >= 3 && c.level <= 4).length,
-    mastered: vocabCards.filter((c) => c.level === 5).length,
-  };
-  const totalStudied = vocabCards.length;
-  const totalCorrect = vocabCards.reduce((sum, c) => sum + c.correctCount, 0);
-  const totalIncorrect = vocabCards.reduce((sum, c) => sum + c.incorrectCount, 0);
-  const accuracy = totalCorrect + totalIncorrect > 0 ? Math.round((totalCorrect / (totalCorrect + totalIncorrect)) * 100) : 0;
-  const grammarCompleted = grammarEntries.filter((g) => g.completed).length;
-  const grammarAvgScore = grammarEntries.length > 0 ? Math.round(grammarEntries.reduce((sum, g) => sum + g.score, 0) / grammarEntries.length) : 0;
-  const today = new Date().toISOString().split('T')[0];
-  const dueForReview = vocabCards.filter((c) => c.nextReview <= today).length;
+  const records = Object.values(progress.records);
+  const learned = records.length;
+  const totalCorrect = records.reduce((s, r) => s + r.correctCount, 0);
+  const totalWrong = records.reduce((s, r) => s + r.incorrectCount, 0);
+  const accuracy =
+    totalCorrect + totalWrong > 0
+      ? Math.round((totalCorrect / (totalCorrect + totalWrong)) * 100)
+      : 0;
+
+  // Solid = 3+ correct in a row. Duds are the ones to replace the hook for.
+  const solid = records.filter((r) => r.streak >= 3).length;
+  const shaky = records.filter((r) => r.streak > 0 && r.streak < 3).length;
+  const duds = records
+    .filter((r) => r.incorrectCount > 0 && r.streak === 0)
+    .sort((a, b) => b.incorrectCount - a.incorrectCount)
+    .slice(0, 8);
+
+  const daysStudied = progress.dayIndex - 1;
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-2xl font-bold mb-1">Statistics</h1>
-      <p className="text-text-secondary text-sm mb-6">Track your learning progress</p>
-
-      <Card className="mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm text-text-secondary">Level {levelInfo.level}</p>
-            <p className="text-xl font-bold">{getLevelTitle(levelInfo.level)}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-primary">{progress.xp}</p>
-            <p className="text-xs text-text-secondary">Total XP</p>
-          </div>
-        </div>
-        <ProgressBar value={(levelInfo.xpInLevel / levelInfo.xpForNext) * 100} />
-        <p className="text-xs text-text-secondary mt-1">{levelInfo.xpInLevel}/{levelInfo.xpForNext} XP to level {levelInfo.level + 1}</p>
-      </Card>
+      <h1 className="text-2xl font-bold mb-1">Stats</h1>
+      <p className="text-text-secondary text-sm mb-6">How the verbs are holding up</p>
 
       <Card className="mb-4">
         <div className="flex items-center justify-around text-center">
           <div>
             <span className="text-3xl block">🔥</span>
             <p className="text-2xl font-bold mt-1">{progress.currentStreak}</p>
-            <p className="text-xs text-text-secondary">Current Streak</p>
+            <p className="text-xs text-text-secondary">Current</p>
           </div>
           <div className="w-px h-12 bg-black/10" />
           <div>
             <span className="text-3xl block">🏆</span>
             <p className="text-2xl font-bold mt-1">{progress.longestStreak}</p>
-            <p className="text-xs text-text-secondary">Best Streak</p>
+            <p className="text-xs text-text-secondary">Best</p>
+          </div>
+          <div className="w-px h-12 bg-black/10" />
+          <div>
+            <span className="text-3xl block">📅</span>
+            <p className="text-2xl font-bold mt-1">{daysStudied}</p>
+            <p className="text-xs text-text-secondary">Days</p>
           </div>
         </div>
       </Card>
 
       <Card className="mb-4">
-        <h3 className="font-semibold mb-3">📚 Vocabulary</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">Progress</h3>
+          <Badge variant="primary">Week {progress.weekIndex + 1}</Badge>
+        </div>
+        <ProgressBar value={(learned / verbs.length) * 100} className="mb-2" />
+        <p className="text-xs text-text-secondary">
+          {learned} of {verbs.length} verbs learned ·{' '}
+          {Math.ceil((verbs.length - learned) / WEEK_LENGTH)} weeks to go
+        </p>
+      </Card>
+
+      <Card className="mb-4">
+        <h3 className="font-semibold mb-3">Recall</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-primary/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-primary">{totalStudied}</p>
-            <p className="text-xs text-text-secondary">Words Studied</p>
-          </div>
           <div className="bg-success/5 rounded-xl p-3 text-center">
             <p className="text-2xl font-bold text-success">{accuracy}%</p>
             <p className="text-xs text-text-secondary">Accuracy</p>
           </div>
-        </div>
-        {dueForReview > 0 && (
-          <div className="bg-warning/5 rounded-xl p-3 mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium">Words due for review</span>
-            <Badge variant="warning">{dueForReview}</Badge>
-          </div>
-        )}
-        <div className="space-y-2">
-          {[['New', vocabByLevel.new], ['Learning', vocabByLevel.learning], ['Known', vocabByLevel.known], ['Mastered', vocabByLevel.mastered]].map(([label, count]) => (
-            <div key={label as string} className="flex items-center justify-between text-sm">
-              <span className="text-text-secondary">{label}</span>
-              <span className={`font-medium ${label === 'Mastered' ? 'text-success' : ''}`}>{count as number}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="mb-4">
-        <h3 className="font-semibold mb-3">✏️ Grammar</h3>
-        <div className="grid grid-cols-2 gap-3">
           <div className="bg-primary/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-primary">{grammarCompleted}</p>
-            <p className="text-xs text-text-secondary">Patterns Practiced</p>
+            <p className="text-2xl font-bold text-primary">{totalCorrect + totalWrong}</p>
+            <p className="text-xs text-text-secondary">Answers</p>
           </div>
-          <div className="bg-success/5 rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-success">{grammarAvgScore}%</p>
-            <p className="text-xs text-text-secondary">Avg Score</p>
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Solid (3+ in a row)</span>
+            <span className="font-medium text-success">{solid}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Still shaky</span>
+            <span className="font-medium text-warning">{shaky}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Needs work</span>
+            <span className="font-medium text-error">{duds.length}</span>
           </div>
         </div>
       </Card>
 
-      <Card>
-        <h3 className="font-semibold mb-3">🎌 JLPT Progress</h3>
-        {(['N5', 'N4', 'N3'] as const).map((level) => {
-          const unlocked = progress.unlockedLevels.includes(level);
-          return (
-            <div key={level} className="flex items-center justify-between py-2 border-b border-black/5 last:border-0">
-              <div className="flex items-center gap-2">
-                <span>{unlocked ? '🔓' : '🔒'}</span>
-                <span className={unlocked ? 'font-medium' : 'text-text-secondary'}>{level}</span>
-              </div>
-              <Badge variant={unlocked ? 'success' : 'default'}>{unlocked ? 'Unlocked' : 'Locked'}</Badge>
-            </div>
-          );
-        })}
-      </Card>
+      {duds.length > 0 && (
+        <Card>
+          <h3 className="font-semibold mb-1">Duds</h3>
+          <p className="text-xs text-text-secondary mb-3">
+            Missed most often — per the method, replace these hooks rather than
+            drilling a bad one.
+          </p>
+          <div className="space-y-2">
+            {duds.map((record) => {
+              const verb = getVerbById(record.verbId);
+              if (!verb) return null;
+              return (
+                <div key={record.verbId} className="flex items-center gap-2.5">
+                  <span className="px-2 py-1 rounded-md bg-error/10 text-error text-xs font-bold shrink-0">
+                    {verb.code ?? '—'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{verb.masu}</p>
+                    <p className="text-xs text-text-secondary truncate">{verb.english}</p>
+                  </div>
+                  <span className="text-xs text-error shrink-0">
+                    ✕ {record.incorrectCount}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
