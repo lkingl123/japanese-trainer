@@ -33,16 +33,18 @@ export default function DictionaryPage() {
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-2xl font-bold mb-1">Dictionary</h1>
-      <p className="text-text-secondary text-sm mb-4">
-        {verbs.length} verbs · {Object.keys(records).length} learned
-      </p>
+      <h1 className="text-2xl font-bold mb-4">
+        Dictionary{' '}
+        <span className="text-sm font-normal text-text-secondary">
+          {verbs.length} verbs
+        </span>
+      </h1>
 
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search verb, meaning, or code…"
+        placeholder="Search…"
         className="w-full px-4 py-3 rounded-xl bg-bg-card border-2 border-transparent focus:border-primary outline-none text-sm mb-3"
       />
 

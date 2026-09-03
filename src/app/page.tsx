@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
-import Badge from '@/components/ui/Badge';
-import ProgressBar from '@/components/ui/ProgressBar';
 import { getProgress, getTodayString } from '@/lib/storage';
-import { verbs, getWeekVerbs } from '@/data/verbs/dictionary';
+import { getWeekVerbs } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
+/**
+ * Home answers one question: what am I doing today?
+ *
+ * Progress totals live on Stats and navigation lives in the bottom bar, so
+ * neither is repeated here.
+ */
 export default function Home() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
 
@@ -26,115 +30,89 @@ export default function Home() {
 
   const doneToday = progress.lastSessionDate === getTodayString();
   const weekVerbs = getWeekVerbs(progress.weekIndex);
-  const dayOfWeek = progress.dayOfWeek;
-  // The test day is the session after the week's last verb has been taught.
+  const { dayOfWeek, currentStreak } = progress;
   const isWeekTest = dayOfWeek > weekVerbs.length;
-  const learned = Object.keys(progress.records).length;
 
   return (
     <div className="px-4 pt-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Verb Trainer</h1>
-        <p className="text-text-secondary text-sm">One verb a day 🌸</p>
-      </div>
+      <h1 className="text-2xl font-bold mb-5">Verb Trainer</h1>
 
-      <Link href="/today">
-        <Card className={`mb-4 ${!doneToday ? 'border-2 border-primary' : ''}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{doneToday ? '✅' : isWeekTest ? '🏁' : '⭐'}</span>
-              <div>
+      <Link href="/today" className="block mb-4">
+        <Card className={!doneToday ? 'border-2 border-primary' : ''}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-3xl shrink-0">
+                {doneToday ? '✅' : isWeekTest ? '🏁' : '⭐'}
+              </span>
+              <div className="min-w-0">
                 <p className="font-semibold">
                   {doneToday
                     ? 'Done for today'
                     : isWeekTest
                       ? `Week ${progress.weekIndex + 1} test`
-                      : "Today's verb"}
+                      : 'Start today’s verb'}
                 </p>
                 <p className="text-xs text-text-secondary">
                   {doneToday
-                    ? 'Back tomorrow for the next one'
+                    ? 'Next verb tomorrow'
                     : isWeekTest
-                      ? `All ${weekVerbs.length} verbs, both directions`
-                      : `Day ${dayOfWeek} of ${weekVerbs.length} · learn 1 + review`}
+                      ? `All ${weekVerbs.length} verbs from this week`
+                      : `Day ${dayOfWeek} of ${weekVerbs.length}`}
+                  {currentStreak > 0 && ` · 🔥 ${currentStreak}`}
                 </p>
               </div>
             </div>
-            <span className="text-text-secondary">→</span>
+            <span className="text-text-secondary shrink-0">→</span>
           </div>
         </Card>
       </Link>
 
-      <Card className="mb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className={`text-3xl ${progress.currentStreak > 0 ? 'gentle-pulse' : ''}`}>🔥</span>
-            <div>
-              <p className="text-2xl font-bold">{progress.currentStreak}</p>
-              <p className="text-xs text-text-secondary">day streak</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold text-text-secondary">{progress.longestStreak}</p>
-            <p className="text-xs text-text-secondary">best</p>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Week {progress.weekIndex + 1}</h3>
-          <Badge variant="primary">
-            {learned} / {verbs.length} verbs
-          </Badge>
-        </div>
-        <ProgressBar value={(learned / verbs.length) * 100} className="mb-4" />
-        <div className="space-y-1.5">
+      <Card>
+        <h2 className="font-semibold mb-3">Week {progress.weekIndex + 1}</h2>
+        <ol className="space-y-1.5">
           {weekVerbs.map((verb, i) => {
-            const seen = !!progress.records[verb.id];
             const isToday = i === dayOfWeek - 1 && !isWeekTest;
+            // Position in the week decides what has been taught — a record
+            // only appears once a verb has been *tested*, which for the newest
+            // verb does not happen until the next day. Today's verb counts as
+            // taught only once today's session is finished.
+            const seen = i < dayOfWeek - 1 || isWeekTest || (isToday && doneToday);
+
             return (
-              <div key={verb.id} className="flex items-center gap-2.5 text-sm">
-                <span className="w-5 shrink-0 text-center">
+              <li key={verb.id} className="flex items-center gap-2.5 text-sm">
+                <span
+                  className={`w-4 shrink-0 text-center ${
+                    seen ? 'text-success' : 'text-text-secondary'
+                  }`}
+                >
                   {seen ? '✓' : isToday ? '→' : '·'}
                 </span>
-                {seen || isToday ? (
+
+                {seen ? (
                   <>
                     {verb.code && (
-                      <span className="text-xs font-bold text-primary w-6">{verb.code}</span>
+                      <span className="w-6 shrink-0 text-xs font-bold text-primary">
+                        {verb.code}
+                      </span>
                     )}
-                    <span className={seen ? '' : 'font-semibold'}>{verb.masu}</span>
-                    <span className="text-text-secondary text-xs truncate">{verb.english}</span>
+                    <span>{verb.masu}</span>
+                    <span className="text-text-secondary text-xs truncate">
+                      {verb.english}
+                    </span>
                   </>
                 ) : (
-                  <span className="text-text-secondary">Day {i + 1}</span>
+                  // Verbs not yet taught stay hidden, today's included — the
+                  // reveal belongs to the session, not this list.
+                  <span className={isToday ? 'font-semibold' : 'text-text-secondary'}>
+                    Day {i + 1}
+                    {isToday && ' · today'}
+                  </span>
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </Card>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link href="/dictionary">
-          <Card>
-            <div className="text-center py-2">
-              <span className="text-3xl block mb-2">📖</span>
-              <p className="font-semibold text-sm">Dictionary</p>
-              <p className="text-xs text-text-secondary">{verbs.length} verbs</p>
-            </div>
-          </Card>
-        </Link>
-        <Link href="/stats">
-          <Card>
-            <div className="text-center py-2">
-              <span className="text-3xl block mb-2">📊</span>
-              <p className="font-semibold text-sm">Stats</p>
-              <p className="text-xs text-text-secondary">{learned} learned</p>
-            </div>
-          </Card>
-        </Link>
-      </div>
     </div>
   );
 }

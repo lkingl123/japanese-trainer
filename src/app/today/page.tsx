@@ -5,11 +5,9 @@ import Link from 'next/link';
 import { UserProgress, DailySession, SessionResult as Result } from '@/lib/types';
 import { getProgress, completeSession, getTodayString } from '@/lib/storage';
 import { buildDailySession, advanceProgress } from '@/lib/session';
-import { getWeekVerbs } from '@/data/verbs/dictionary';
 import VerbLearn from '@/components/verbs/VerbLearn';
 import VerbQuiz from '@/components/verbs/VerbQuiz';
 import SessionResult from '@/components/verbs/SessionResult';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
 type Stage = 'loading' | 'learn' | 'quiz' | 'done' | 'already-done';
@@ -59,17 +57,11 @@ export default function TodayPage() {
       <div className="px-4 pt-6">
         <div className="text-center py-10">
           <span className="text-5xl block mb-4">✅</span>
-          <h1 className="text-2xl font-bold mb-2">Today&rsquo;s done</h1>
-          <p className="text-text-secondary text-sm mb-6">
-            Come back tomorrow for the next verb — and a check on this one.
+          <h1 className="text-2xl font-bold mb-2">Done for today</h1>
+          <p className="text-text-secondary text-sm">
+            Next verb tomorrow{streak > 0 ? ` · 🔥 ${streak}` : ''}
           </p>
         </div>
-        <Card className="mb-4">
-          <div className="text-center">
-            <p className="text-3xl font-bold">🔥 {streak}</p>
-            <p className="text-xs text-text-secondary mt-1">day streak</p>
-          </div>
-        </Card>
         <Link href="/">
           <Button size="lg" className="w-full">Back home</Button>
         </Link>
@@ -78,9 +70,6 @@ export default function TodayPage() {
   }
 
   if (!session || !progress) return null;
-
-  // The final week is short, so the label comes from the week itself.
-  const weekLength = getWeekVerbs(progress.weekIndex).length;
 
   return (
     <div className="px-4 pt-6">
@@ -96,25 +85,15 @@ export default function TodayPage() {
       )}
 
       {stage === 'learn' && session.newVerb && (
-        <>
-          <div className="mb-4">
-            <p className="text-xs text-text-secondary">
-              Day {session.dayOfWeek} of {weekLength} · Week {progress.weekIndex + 1}
-            </p>
-          </div>
-          <VerbLearn verb={session.newVerb} onContinue={() => setStage('quiz')} />
-        </>
+        <VerbLearn verb={session.newVerb} onContinue={() => setStage('quiz')} />
       )}
 
       {stage === 'quiz' && (
         <>
           {session.isWeekTest && (
-            <div className="mb-4 text-center">
-              <h1 className="text-xl font-bold">Week {progress.weekIndex + 1} test</h1>
-              <p className="text-xs text-text-secondary">
-                All {weekLength} verbs, both directions
-              </p>
-            </div>
+            <h1 className="mb-4 text-center text-xl font-bold">
+              Week {progress.weekIndex + 1} test
+            </h1>
           )}
           <VerbQuiz
             questions={session.questions}

@@ -42,15 +42,13 @@ export default function SettingsPage() {
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-2xl font-bold mb-1">Settings</h1>
-      <p className="text-text-secondary text-sm mb-6">Your progress and backups</p>
+      <h1 className="text-2xl font-bold mb-5">Settings</h1>
 
       <Card className="mb-4">
-        <h3 className="font-semibold mb-1">Where progress lives</h3>
         <p className="text-xs text-text-secondary leading-relaxed mb-4">
-          Everything is saved in this browser on this device. Nothing is sent
-          anywhere. Clearing site data will erase it, so export a backup if you
-          have a streak worth keeping.
+          Progress is saved in this browser only — nothing is sent anywhere.
+          Clearing site data erases it, so keep a backup of a streak you care
+          about.
         </p>
         <Button onClick={handleExport} className="w-full">
           Export backup
@@ -58,9 +56,8 @@ export default function SettingsPage() {
       </Card>
 
       <Card className="mb-4">
-        <h3 className="font-semibold mb-1">Restore</h3>
         <p className="text-xs text-text-secondary leading-relaxed mb-4">
-          Load a backup file. This replaces all current progress.
+          Restoring replaces all current progress.
         </p>
         <input
           ref={fileInput}
@@ -79,9 +76,9 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <h3 className="font-semibold mb-1">Start over</h3>
         <p className="text-xs text-text-secondary leading-relaxed mb-4">
-          Clears every record and returns to week 1, day 1. This cannot be undone.
+          Resetting clears every record and returns to week 1, day 1. This
+          cannot be undone.
         </p>
         {confirmingReset ? (
           <div className="flex gap-2">

@@ -12,63 +12,37 @@ interface SessionResultProps {
   isWeekTest: boolean;
 }
 
+/**
+ * End of a session. The verbs that were missed are the only thing worth
+ * dwelling on, so they get the space — the score is a single line.
+ */
 export default function SessionResult({ result, streak, isWeekTest }: SessionResultProps) {
-  const { totalQuestions, correctAnswers, missed, newVerb } = result;
-  const pct = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  const { totalQuestions, correctAnswers, missed } = result;
   const perfect = missed.length === 0;
+  const pct = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
   return (
     <div className="slide-up">
-      <div className="text-center py-6">
+      <div className="text-center py-8">
         <span className="text-5xl block mb-3">{perfect ? '🎉' : pct >= 70 ? '👍' : '💪'}</span>
         <h1 className="text-2xl font-bold mb-1">
           {isWeekTest ? 'Week complete' : 'Session complete'}
         </h1>
         <p className="text-text-secondary text-sm">
-          {perfect ? 'Perfect — everything stuck.' : `${correctAnswers} of ${totalQuestions} correct`}
+          {correctAnswers} of {totalQuestions} correct
+          {streak > 0 && ` · 🔥 ${streak}`}
         </p>
       </div>
 
-      <Card className="mb-4">
-        <div className="flex items-center justify-around text-center">
-          <div>
-            <p className="text-3xl font-bold text-primary">{pct}%</p>
-            <p className="text-xs text-text-secondary">Recall</p>
-          </div>
-          <div className="w-px h-12 bg-black/10" />
-          <div>
-            <p className="text-3xl font-bold">🔥 {streak}</p>
-            <p className="text-xs text-text-secondary">Day streak</p>
-          </div>
-        </div>
-      </Card>
-
-      {newVerb && (
-        <Card className="mb-4">
-          <p className="text-xs text-text-secondary mb-2">Learned today</p>
-          <div className="flex items-center gap-3">
-            {newVerb.code && (
-              <span className="px-3 py-1.5 rounded-lg bg-primary text-white font-bold">
-                {newVerb.code}
-              </span>
-            )}
-            <div className="flex-1">
-              <p className="font-bold">{newVerb.masu}</p>
-              <p className="text-sm text-text-secondary">{newVerb.english}</p>
-            </div>
-            <AudioButton japanese={newVerb.japanese} size="sm" />
-          </div>
-        </Card>
-      )}
-
       {missed.length > 0 && (
         <Card className="mb-4">
-          <p className="text-sm font-semibold mb-3">
-            Review these — they&rsquo;ll come back tomorrow
+          <p className="text-sm font-semibold mb-1">Coming back tomorrow</p>
+          <p className="text-xs text-text-secondary mb-3">
+            {missed.length === 1 ? 'This one slipped' : `These ${missed.length} slipped`}
           </p>
-          <div className="space-y-2.5">
+          <ul className="space-y-2.5">
             {missed.map((verb) => (
-              <div key={verb.id} className="flex items-center gap-3">
+              <li key={verb.id} className="flex items-center gap-3">
                 {verb.code && (
                   <span className="px-2 py-1 rounded-md bg-error/10 text-error text-xs font-bold shrink-0">
                     {verb.code}
@@ -82,15 +56,15 @@ export default function SessionResult({ result, streak, isWeekTest }: SessionRes
                   </p>
                 </div>
                 <AudioButton japanese={verb.japanese} size="sm" />
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </Card>
       )}
 
       <Link href="/">
         <Button size="lg" className="w-full">
-          Done for today
+          Done
         </Button>
       </Link>
     </div>
