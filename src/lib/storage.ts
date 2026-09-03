@@ -16,6 +16,7 @@ const STORAGE_KEY = 'verb-trainer-progress';
 const DEFAULT_PROGRESS: UserProgress = {
   dayIndex: 1,
   weekIndex: 0,
+  dayOfWeek: 1,
   rotationIndex: 0,
   currentStreak: 0,
   longestStreak: 0,
@@ -135,6 +136,7 @@ export function recordAnswer(verbId: string, correct: boolean, weekIndex: number
 /** Marks today's session done: advances the course and extends the streak. */
 export async function completeSession(next: {
   dayIndex: number;
+  dayOfWeek: number;
   weekIndex: number;
   rotationIndex: number;
 }): Promise<UserProgress> {

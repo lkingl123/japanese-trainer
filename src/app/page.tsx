@@ -6,7 +6,6 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import ProgressBar from '@/components/ui/ProgressBar';
 import { getProgress, getTodayString } from '@/lib/storage';
-import { WEEK_LENGTH } from '@/lib/session';
 import { verbs, getWeekVerbs } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
@@ -26,9 +25,10 @@ export default function Home() {
   }
 
   const doneToday = progress.lastSessionDate === getTodayString();
-  const dayOfWeek = ((progress.dayIndex - 1) % WEEK_LENGTH) + 1;
-  const isWeekTest = dayOfWeek === WEEK_LENGTH;
   const weekVerbs = getWeekVerbs(progress.weekIndex);
+  const dayOfWeek = progress.dayOfWeek;
+  // The test day is the session after the week's last verb has been taught.
+  const isWeekTest = dayOfWeek > weekVerbs.length;
   const learned = Object.keys(progress.records).length;
 
   return (
@@ -56,7 +56,7 @@ export default function Home() {
                     ? 'Back tomorrow for the next one'
                     : isWeekTest
                       ? 'All 7 verbs, both directions'
-                      : `Day ${dayOfWeek} of 7 · learn 1 + review`}
+                      : `Day ${dayOfWeek} of ${weekVerbs.length} · learn 1 + review`}
                 </p>
               </div>
             </div>

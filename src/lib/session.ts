@@ -97,10 +97,16 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
   const { weekIndex } = progress;
   const weekVerbs = getWeekVerbs(weekIndex);
 
-  // Day within the current week batch, 1-7. dayIndex is the next session's
-  // number, so day 1 of a week is dayIndex % WEEK_LENGTH === 1.
-  const dayOfWeek = ((progress.dayIndex - 1) % WEEK_LENGTH) + 1;
-  const isWeekTest = dayOfWeek === WEEK_LENGTH;
+  // Day within the current week batch.
+  //
+  // A week is WEEK_LENGTH + 1 sessions long: one per verb, then a test day that
+  // teaches nothing. Deriving this from the global dayIndex would drift by a
+  // day per week and eventually skip verbs, so it is tracked on its own.
+  const dayOfWeek = progress.dayOfWeek;
+
+  // The test day is the one after the last verb of the week has been taught.
+  // A short final week tests as soon as its verbs run out.
+  const isWeekTest = dayOfWeek > weekVerbs.length;
 
   const questions: ReviewQuestion[] = [];
 
@@ -145,16 +151,20 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
  */
 export function advanceProgress(progress: UserProgress): {
   dayIndex: number;
+  dayOfWeek: number;
   weekIndex: number;
   rotationIndex: number;
 } {
-  const dayOfWeek = ((progress.dayIndex - 1) % WEEK_LENGTH) + 1;
-  const finishedWeek = dayOfWeek === WEEK_LENGTH;
+  // The week ends after its test day, which is the session following the last
+  // verb of that week.
+  const finishedWeek = progress.dayOfWeek > getWeekVerbs(progress.weekIndex).length;
+  const lastWeek = getTotalWeeks() - 1;
 
   return {
     dayIndex: progress.dayIndex + 1,
+    dayOfWeek: finishedWeek ? 1 : progress.dayOfWeek + 1,
     weekIndex: finishedWeek
-      ? Math.min(progress.weekIndex + 1, getTotalWeeks() - 1)
+      ? Math.min(progress.weekIndex + 1, lastWeek)
       : progress.weekIndex,
     rotationIndex: progress.rotationIndex + 1,
   };

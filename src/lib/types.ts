@@ -61,6 +61,12 @@ export interface UserProgress {
   dayIndex: number;
   /** Which week batch is currently being learned (0-based). */
   weekIndex: number;
+  /**
+   * Day within the current week batch, starting at 1. A week runs one verb per
+   * day and then a test day, so this is tracked separately from dayIndex —
+   * deriving it from the running day count drifts and skips verbs.
+   */
+  dayOfWeek: number;
   /** Which past week gets cycled into review next (0-based, rotates). */
   rotationIndex: number;
   currentStreak: number;

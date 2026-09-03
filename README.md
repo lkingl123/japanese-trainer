@@ -46,9 +46,24 @@ network. Settings has export/restore so a streak can be backed up or moved.
 npm install
 npm run dev      # http://localhost:3000
 npm run build
+npm test         # unit tests
+npm run test:coverage
 ```
 
 No environment variables required.
+
+## Tests
+
+`npm test` covers the three places a bug would be silent:
+
+- **`dictionary.test.ts`** — the method's rules as executable checks: -masu form,
+  unique ids/verbs/meanings/codes, every code grounded in its own connection,
+  and code/connection present or absent together.
+- **`session.test.ts`** — the scheduling. Walks the entire course day by day and
+  asserts every verb is taught exactly once in order, sessions stay bounded, and
+  the past-week rotation never repeats the week being learned.
+- **`storage.test.ts`** — streak arithmetic across day boundaries, and recovery
+  from corrupt, partial, or unwritable localStorage.
 
 ## Layout
 
