@@ -82,12 +82,17 @@ export default function Home() {
         </h2>
         <ol className="space-y-1.5">
           {weekVerbs.map((verb, i) => {
-            const isToday = i === dayOfWeek - 1 && !isWeekTest;
-            // Position in the week decides what has been taught — a record
-            // only appears once a verb has been *tested*, which for the newest
-            // verb does not happen until the next day. Today's verb counts as
-            // taught only once today's session is finished.
-            const seen = i < dayOfWeek - 1 || isWeekTest || (isToday && doneToday);
+            // dayOfWeek points at the NEXT session to run, so once today's is
+            // done it already names tomorrow. Everything before that position
+            // has been taught; the verb sitting on it has not been reached yet
+            // unless the week has run out of verbs entirely.
+            //
+            // Records cannot answer this: a verb gets one only when it is first
+            // *tested*, which for the newest verb is the following day.
+            const taughtCount = isWeekTest ? weekVerbs.length : dayOfWeek - 1;
+            const seen = i < taughtCount;
+            // Nothing is "today" once today's session is finished.
+            const isToday = !doneToday && !isWeekTest && i === taughtCount;
 
             return (
               <li key={verb.id} className="flex items-center gap-2.5 text-sm">
