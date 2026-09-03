@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { UserProgress, DailySession, SessionResult as Result } from '@/lib/types';
 import { getProgress, completeSession, getTodayString } from '@/lib/storage';
 import { buildDailySession, advanceProgress } from '@/lib/session';
+import { getWeekVerbs } from '@/data/verbs/dictionary';
 import VerbLearn from '@/components/verbs/VerbLearn';
 import VerbQuiz from '@/components/verbs/VerbQuiz';
 import SessionResult from '@/components/verbs/SessionResult';
@@ -78,13 +79,27 @@ export default function TodayPage() {
 
   if (!session || !progress) return null;
 
+  // The final week is short, so the label comes from the week itself.
+  const weekLength = getWeekVerbs(progress.weekIndex).length;
+
   return (
     <div className="px-4 pt-6">
+      {/* A way out mid-session. Answers already given are saved, so leaving
+          loses only the rest of today's questions. */}
+      {stage !== 'done' && (
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 -ml-1 mb-3 px-2 py-1 text-sm text-text-secondary hover:text-text rounded-lg"
+        >
+          ← Exit
+        </Link>
+      )}
+
       {stage === 'learn' && session.newVerb && (
         <>
           <div className="mb-4">
             <p className="text-xs text-text-secondary">
-              Day {session.dayOfWeek} of 7 · Week {progress.weekIndex + 1}
+              Day {session.dayOfWeek} of {weekLength} · Week {progress.weekIndex + 1}
             </p>
           </div>
           <VerbLearn verb={session.newVerb} onContinue={() => setStage('quiz')} />
@@ -96,7 +111,9 @@ export default function TodayPage() {
           {session.isWeekTest && (
             <div className="mb-4 text-center">
               <h1 className="text-xl font-bold">Week {progress.weekIndex + 1} test</h1>
-              <p className="text-xs text-text-secondary">All 7 verbs, both directions</p>
+              <p className="text-xs text-text-secondary">
+                All {weekLength} verbs, both directions
+              </p>
             </div>
           )}
           <VerbQuiz

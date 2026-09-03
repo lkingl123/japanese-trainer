@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ReviewQuestion, Verb, SessionResult } from '@/lib/types';
 import { recordAnswer } from '@/lib/storage';
 import { speakJapanese } from '@/lib/speech';
 import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Badge from '@/components/ui/Badge';
 
@@ -22,54 +23,106 @@ const SOURCE_LABEL: Record<ReviewQuestion['source'], string> = {
   'week-test': 'Week test',
 };
 
+/** How long a correct answer stays on screen before moving on. */
+const CORRECT_ADVANCE_MS = 900;
+
 export default function VerbQuiz({ questions, weekIndex, onComplete, newVerb }: VerbQuizProps) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [missed, setMissed] = useState<Verb[]>([]);
+  const continueRef = useRef<HTMLButtonElement>(null);
 
   const current = questions[index];
+  const answered = selected !== null;
+  const isCorrect = answered && selected === current?.correctAnswer;
+
+  const goToNext = useCallback(
+    (wasCorrect: boolean, missedSoFar: Verb[]) => {
+      if (index + 1 < questions.length) {
+        setIndex((i) => i + 1);
+        setSelected(null);
+      } else {
+        onComplete({
+          totalQuestions: questions.length,
+          correctAnswers: correctCount + (wasCorrect ? 1 : 0),
+          missed: missedSoFar,
+          newVerb,
+        });
+      }
+    },
+    [index, questions.length, correctCount, onComplete, newVerb]
+  );
 
   const handleSelect = useCallback(
     (option: string) => {
       // Guard against double-taps while the reveal is showing.
-      if (selected !== null) return;
+      if (answered) return;
 
       const correct = option === current.correctAnswer;
       setSelected(option);
 
-      // Cache-first write — never blocks the advance. Awaiting a network call
-      // here is what used to strand the next question in a disabled state.
+      // Cache-first write — never blocks the advance.
       recordAnswer(current.verb.id, correct, weekIndex);
 
-      if (correct) {
-        setCorrectCount((c) => c + 1);
-        speakJapanese(current.verb.japanese);
-      }
+      // Always speak the correct form, right or wrong. Hearing the word you
+      // just missed is the whole point of the correction; gating audio behind
+      // a correct answer means you never hear the ones you're getting wrong.
+      speakJapanese(current.verb.japanese);
 
       const nextMissed = correct ? missed : [...missed, current.verb];
-      if (!correct) setMissed(nextMissed);
-
-      setTimeout(() => {
-        if (index + 1 < questions.length) {
-          setIndex((i) => i + 1);
-          setSelected(null);
-        } else {
-          onComplete({
-            totalQuestions: questions.length,
-            correctAnswers: correctCount + (correct ? 1 : 0),
-            missed: nextMissed,
-            newVerb,
-          });
-        }
-      }, correct ? 900 : 2200);
+      if (correct) {
+        setCorrectCount((c) => c + 1);
+        // A correct answer needs only a moment to register before moving on.
+        setTimeout(() => goToNext(true, nextMissed), CORRECT_ADVANCE_MS);
+      } else {
+        // A miss waits for the user. Auto-advancing here rips the correction
+        // away before it can be read — the one thing SRS apps treat as a bug.
+        setMissed(nextMissed);
+      }
     },
-    [selected, current, index, questions.length, correctCount, missed, weekIndex, onComplete, newVerb]
+    [answered, current, missed, weekIndex, goToNext]
   );
+
+  // Move focus to Continue after a miss so the keyboard path is unbroken and
+  // a screen reader lands on the way forward.
+  useEffect(() => {
+    if (answered && !isCorrect) continueRef.current?.focus();
+  }, [answered, isCorrect]);
+
+  // Number keys pick an option; Enter/Space continues after a miss. The
+  // listener is scoped to the quiz being on screen and ignores typing in
+  // inputs, per WCAG 2.1.4 on single-character shortcuts.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!current) return;
+
+      if (!answered) {
+        const n = Number(e.key);
+        if (n >= 1 && n <= current.options.length) {
+          e.preventDefault();
+          handleSelect(current.options[n - 1]);
+        }
+        return;
+      }
+
+      // After a miss, Enter/Space advances. Correct answers advance on their
+      // own, so there is nothing to confirm.
+      if (!isCorrect && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        goToNext(false, missed);
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [current, answered, isCorrect, missed, handleSelect, goToNext]);
 
   if (!current) return null;
 
-  const isCorrect = selected === current.correctAnswer;
   const prompt = current.direction === 'en-to-jp' ? current.verb.english : current.verb.masu;
   const instruction =
     current.direction === 'en-to-jp' ? 'Which verb means this?' : 'What does this mean?';
@@ -81,25 +134,32 @@ export default function VerbQuiz({ questions, weekIndex, onComplete, newVerb }: 
           {SOURCE_LABEL[current.source]}
         </Badge>
         <span className="text-xs text-text-secondary">
-          {index + 1} / {questions.length}
+          Question {index + 1} of {questions.length}
         </span>
       </div>
-      <ProgressBar value={(index / questions.length) * 100} className="mb-6" />
+      {/* Fill reflects questions finished, so it reads 0% before the first
+          answer and 100% at the end. */}
+      <ProgressBar
+        value={((index + (answered ? 1 : 0)) / questions.length) * 100}
+        className="mb-6"
+      />
 
       <Card className="mb-5">
         <div className="text-center py-6">
           <p className="text-xs text-text-secondary mb-3">{instruction}</p>
-          <h2 className="text-3xl font-bold break-words">{prompt}</h2>
+          <h2 className="text-3xl font-bold break-words" lang={current.direction === 'jp-to-en' ? 'ja-Latn' : 'en'}>
+            {prompt}
+          </h2>
         </div>
       </Card>
 
       <div className="space-y-2.5">
-        {current.options.map((option) => {
+        {current.options.map((option, i) => {
           const isAnswer = option === current.correctAnswer;
           const isPicked = option === selected;
 
-          let style = 'bg-bg-card border-2 border-transparent';
-          if (selected !== null) {
+          let style = 'bg-bg-card border-2 border-transparent hover:border-primary/30';
+          if (answered) {
             if (isAnswer) style = 'bg-success/10 border-2 border-success';
             else if (isPicked) style = 'bg-error/10 border-2 border-error';
             else style = 'bg-bg-card border-2 border-transparent opacity-50';
@@ -109,22 +169,46 @@ export default function VerbQuiz({ questions, weekIndex, onComplete, newVerb }: 
             <button
               key={option}
               onClick={() => handleSelect(option)}
-              disabled={selected !== null}
-              className={`w-full text-left px-4 py-3.5 rounded-xl font-medium transition-all active:scale-[0.98] disabled:cursor-default ${style}`}
+              disabled={answered}
+              className={`w-full text-left px-4 py-3.5 rounded-xl font-medium transition-all active:scale-[0.98] disabled:cursor-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${style}`}
             >
-              <span className="flex items-center justify-between">
-                <span>{option}</span>
-                {selected !== null && isAnswer && <span>✓</span>}
-                {selected !== null && isPicked && !isAnswer && <span>✕</span>}
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-3 min-w-0">
+                  <span
+                    aria-hidden="true"
+                    className="hidden sm:flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-black/5 text-xs text-text-secondary"
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="truncate">{option}</span>
+                </span>
+                {/* An icon and a word, not colour alone — WCAG 1.4.1. */}
+                {answered && isAnswer && (
+                  <span className="flex items-center gap-1 shrink-0 text-success text-sm font-semibold">
+                    ✓ Correct
+                  </span>
+                )}
+                {answered && isPicked && !isAnswer && (
+                  <span className="flex items-center gap-1 shrink-0 text-error text-sm font-semibold">
+                    ✕ Your answer
+                  </span>
+                )}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* The mnemonic is revealed only after answering — strongest when it is
-          the reminder, not the prompt. Shown on a miss especially. */}
-      {selected !== null && (
+      {/* Announced to screen readers the moment feedback appears. */}
+      <div role="alert" aria-live="assertive" className="sr-only">
+        {answered
+          ? isCorrect
+            ? `Correct. ${current.verb.masu} means ${current.verb.english}.`
+            : `Incorrect. ${current.verb.masu} means ${current.verb.english}.`
+          : ''}
+      </div>
+
+      {answered && (
         <div className="mt-5 slide-up">
           {!isCorrect && (
             <Card className="mb-2">
@@ -134,11 +218,24 @@ export default function VerbQuiz({ questions, weekIndex, onComplete, newVerb }: 
               </p>
             </Card>
           )}
+
           {current.verb.code && current.verb.connection && (
             <div className="bg-primary/5 rounded-xl px-4 py-3 text-sm text-center">
               <span className="font-bold text-primary">{current.verb.code}</span>
               <span className="text-text-secondary"> — {current.verb.connection}</span>
             </div>
+          )}
+
+          {/* The user decides when to leave a correction behind. */}
+          {!isCorrect && (
+            <Button
+              ref={continueRef}
+              onClick={() => goToNext(false, missed)}
+              size="lg"
+              className="w-full mt-4"
+            >
+              {index + 1 < questions.length ? 'Continue →' : 'Finish'}
+            </Button>
           )}
         </div>
       )}

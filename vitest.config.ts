@@ -6,10 +6,13 @@ export default defineConfig({
   // app does.
   plugins: [tsconfigPaths()],
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     // jsdom gives the storage tests a real localStorage to work against.
     environment: 'jsdom',
-    restoreMocks: true,
+    setupFiles: ['./vitest.setup.ts'],
+    // Clear call history between tests, but keep vi.mock factories installed —
+    // restoreMocks would unhook them and break module mocks.
+    clearMocks: true,
     coverage: {
       provider: 'v8',
       include: ['src/lib/**', 'src/data/**'],

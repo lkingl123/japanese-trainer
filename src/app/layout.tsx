@@ -33,9 +33,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <div className="max-w-lg mx-auto min-h-screen pb-nav">
+        <main className="max-w-lg mx-auto min-h-screen pb-nav">
           {children}
-        </div>
+        </main>
         <BottomNav />
       </body>
     </html>

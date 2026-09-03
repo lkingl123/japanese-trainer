@@ -55,7 +55,7 @@ export default function Home() {
                   {doneToday
                     ? 'Back tomorrow for the next one'
                     : isWeekTest
-                      ? 'All 7 verbs, both directions'
+                      ? `All ${weekVerbs.length} verbs, both directions`
                       : `Day ${dayOfWeek} of ${weekVerbs.length} · learn 1 + review`}
                 </p>
               </div>
