@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { UserProgress } from './types';
 import { buildDailySession } from './session';
+import { markVerbKnown, resetProgress, getCachedProgress } from './storage';
 import { verbs, getWeekVerbs, getTotalWeeks, getSyllabus, WEEK_LENGTH } from '@/data/verbs/dictionary';
 
 /**
@@ -111,5 +112,22 @@ describe('screens agree with the session engine', () => {
     expect(listWeek.map((v) => v.id)).not.toContain(skipped[0]);
     // Day 1 of the list is the verb today's session actually teaches.
     expect(listWeek[0].id).toBe(session.newVerb!.id);
+  });
+});
+
+describe('resetting the course', () => {
+  it('clears skipped verbs along with records', () => {
+    // knownVerbIds is an array on DEFAULT_PROGRESS, so a shallow spread would
+    // hand out the shared instance and skips would outlive a reset.
+    markVerbKnown(verbs[0].id);
+    expect(getCachedProgress()?.knownVerbIds).toContain(verbs[0].id);
+
+    resetProgress();
+    expect(getCachedProgress()?.knownVerbIds).toEqual([]);
+
+    // The default must not have been mutated by the skip above.
+    markVerbKnown(verbs[1].id);
+    resetProgress();
+    expect(getCachedProgress()?.knownVerbIds).toEqual([]);
   });
 });

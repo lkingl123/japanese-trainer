@@ -314,6 +314,9 @@ export function importProgress(json: string): UserProgress {
 
 /** Wipes all progress and starts the course over. */
 export function resetProgress(): void {
-  cache = { ...DEFAULT_PROGRESS, records: {} };
+  // records and knownVerbIds are rebuilt rather than spread: a shallow copy
+  // would share DEFAULT_PROGRESS's own array, so a later skip would mutate the
+  // default itself and survive the next reset.
+  cache = { ...DEFAULT_PROGRESS, records: {}, knownVerbIds: [] };
   write(cache);
 }
