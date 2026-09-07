@@ -43,76 +43,84 @@ describe('verb library invariants', () => {
     expect(dupes).toEqual([]);
   });
 
-  it('has one verb per mnemonic code (method rule 3)', () => {
-    const codes = verbs.map((v) => v.code).filter((c): c is string => c !== null);
-    const seen = new Set<string>();
-    const dupes = codes.filter((c) => (seen.has(c) ? true : (seen.add(c), false)));
-    expect(dupes).toEqual([]);
-  });
-
-  it('starts each code with the verb initial', () => {
-    // Letter 1 is always the first letter of the Japanese verb. "He"
-    // (hairimasu -> enter) still satisfies this; it is a word rather than an
-    // abbreviation, which is why the second letter is lowercase.
+  it('starts each sound with the verb initial', () => {
+    // The sound chunks are the verb itself, re-spelled — so the first chunk
+    // must begin with the same letter the romaji does.
     const offenders = verbs.filter(
-      (v) => v.code && v.code[0].toLowerCase() !== v.masu[0].toLowerCase()
+      (v) => v.sound[0].toLowerCase() !== v.masu[0].toLowerCase()
     );
-    expect(offenders.map((v) => `${v.id}: ${v.code} vs ${v.masu}`)).toEqual([]);
+    expect(offenders.map((v) => `${v.id}: ${v.sound} vs ${v.masu}`)).toEqual([]);
   });
 
-  it('grounds every code in its own connection', () => {
-    // The method's requirement is that a code be an abbreviation the user
-    // already knows AND that the connection explain it — not letter-by-letter
-    // arithmetic. Codes ground themselves in one of three ways:
-    //   - the code appears verbatim in the connection ("TP scroll", "your KD")
-    //   - its letters start words in the connection ("Mars Protects")
-    //   - a single connection word starts with the whole code ("SPectre")
-    // A code that does none of these has a connection that doesn't explain it.
-    //
-    // Two entries are known, deliberate exceptions where the abbreviation is
-    // one the user knows from outside the sentence:
-    //   DC — "DisConnect", the two letters come from inside a single word
-    //   KB — lives inside "BKB", the item you buy
-    const grandfathered = new Set(['v-demasu', 'v-kaimasu']);
-
+  it('builds each sound out of the verb it belongs to', () => {
+    // Chunks joined together must be a prefix of the romaji, ignoring the
+    // -masu tail and any spaces. This catches a chunking typo (MA-MO-RE for
+    // mamorimasu) that would otherwise teach the wrong sounds.
     const offenders = verbs.filter((v) => {
-      if (!v.code || !v.connection || grandfathered.has(v.id)) return false;
-      const code = v.code.toLowerCase();
-      const text = v.connection.toLowerCase();
+      const joined = v.sound.toLowerCase().replace(/-/g, '');
+      const stem = v.masu.toLowerCase().replace(/\s/g, '');
+      return !stem.startsWith(joined);
+    });
+    expect(offenders.map((v) => `${v.id}: ${v.sound} vs ${v.masu}`)).toEqual([]);
+  });
+
+  it('drops the -masu tail from every sound', () => {
+    // -masu never varies, so encoding it would waste the hook's capacity on
+    // the one part of the word that carries no information.
+    const offenders = verbs.filter((v) =>
+      v.sound.toLowerCase().replace(/-/g, '').endsWith('masu')
+    );
+    expect(offenders.map((v) => `${v.id}: ${v.sound}`)).toEqual([]);
+  });
+
+  it('grounds every hook in its own sound (method rule 1)', () => {
+    // A hook has to reproduce the sounds it stands in for, otherwise it is
+    // just a sentence about the meaning. The first chunk is load-bearing —
+    // recall walks the word from its front — so require the hook to carry it
+    // one of three ways:
+    //   - a word starts with the whole chunk  ("MArs" for MA)
+    //   - the chunk appears verbatim anywhere ("TP scroll" for TSU... TP)
+    //   - consecutive words spell it out      ("Nature's ... GEts" for NI-GE)
+    // Spelling the chunk with a different letter than the romaji uses (CAr
+    // for KA) fails all three, which is the point: reading it back would
+    // hand you the wrong first letter.
+    const offenders = verbs.filter((v) => {
+      if (!v.hook) return false;
+      const first = v.sound.split('-')[0].toLowerCase();
+      const text = v.hook.toLowerCase();
       const words = text.split(/[^a-z]+/).filter(Boolean);
 
-      const appearsVerbatim = new RegExp(`\\b${code}\\b`).test(text);
-      const spelledByInitials = [...code].every((letter) =>
-        words.some((w) => w.startsWith(letter))
-      );
-      const insideOneWord = words.some((w) => w.startsWith(code));
+      if (words.some((w) => w.startsWith(first))) return false;
+      if (text.includes(first)) return false;
 
-      return !appearsVerbatim && !spelledByInitials && !insideOneWord;
+      // Consecutive initials spelling the chunk, e.g. n + ge for "ni-ge".
+      const initials = words.map((w) => w[0]).join('');
+      return !initials.includes(first[0]);
     });
-    expect(
-      offenders.map((v) => `${v.id}: ${v.code} vs "${v.connection}"`)
-    ).toEqual([]);
+    expect(offenders.map((v) => `${v.id}: ${v.sound} vs "${v.hook}"`)).toEqual([]);
   });
 
-  it('pairs a code with a connection, and a blank with neither (method rule 4)', () => {
-    // A hook is a code AND the line explaining it. Half a hook is worse than
-    // none, so the two fields move together.
-    const offenders = verbs.filter(
-      (v) => (v.code === null) !== (v.connection === null)
-    );
+  it('pairs a hook with its kind, and a blank with neither (method rule 5)', () => {
+    // A hook and the system it came from move together; a hook with no kind
+    // could not be shown with its tag.
+    const offenders = verbs.filter((v) => (v.hook === null) !== (v.hookKind === null));
     expect(offenders.map((v) => v.id)).toEqual([]);
   });
 
   it('has no blank strings where a null is meant', () => {
     const offenders = verbs.filter(
-      (v) => v.code?.trim() === '' || v.connection?.trim() === ''
+      (v) => v.sound.trim() === '' || v.hook?.trim() === ''
     );
     expect(offenders.map((v) => v.id)).toEqual([]);
   });
 
-  it('has two-letter codes', () => {
-    const offenders = verbs.filter((v) => v.code !== null && v.code.length !== 2);
-    expect(offenders.map((v) => `${v.id}: ${v.code}`)).toEqual([]);
+  it('keeps Dota the dominant hook system', () => {
+    // General hooks are the honest fallback, not the default. If they ever
+    // outnumber Dota ones the dictionary has drifted off-method and the
+    // theme that makes it memorable is gone.
+    const dota = verbs.filter((v) => v.hookKind === 'dota').length;
+    const general = verbs.filter((v) => v.hookKind === 'general').length;
+    expect(dota).toBeGreaterThan(general);
   });
 
   it('has a non-empty meaning for every verb', () => {

@@ -4,57 +4,102 @@ Owner: King. Level: intermediate (Duolingo ~level 27). Skip beginner verbs (eat,
 
 ## The method (the only format to use)
 
-Each verb gets a **two-letter code**:
+Each verb gets a **hook**: a short, obvious image that pulls the Japanese word
+back — not just its first letter. Dota 2 is the default flavor; where no hero,
+item, or piece of slang honestly fits, a general mnemonic is used instead.
 
-- Letter 1 = first letter of the Japanese verb (romaji, -masu form)
-- Letter 2 = first letter of the English meaning
-- The code must be a **real abbreviation King already knows**, and its meaning must **connect to the verb**. Dota 2 abbreviations are preferred (heroes, items, terms, chat slang). Non-Dota is fine if it's obvious (a coworker's initials, a country, a company).
+Three fields:
+
+- **`sound`** — the Japanese word chunked into readable syllables, uppercased,
+  hyphen-separated. This is what the hook has to reproduce.
+  `mamorimasu` → `MA-MO-RI`. Drop the `-masu` tail; it never varies, so it
+  carries no memory load.
+- **`hook`** — one line whose sound overlaps the front of the word, describing
+  something that does what the verb *means*.
+- **`hookKind`** — `dota` or `general`, so the app can tag it and the weaker
+  general hooks can be found and rewritten later.
 
 Format per line:
 
 ```
-CODE  japanese-verb (masu form) → english meaning — one-line connection
+japanese-verb (masu form) → english meaning
+  SOUND-CHUNKS — one-line hook            [dota|general]
 ```
 
 Examples that work:
 
 ```
-He  hairimasu → enter — "He" enters (King's original)
-TC  tsukurimasu → cook — TC, a coworker's initials (King's original)
-KD  kimemasu → decide — your KD decides the game
-SB  shinjimasu → believe — Spirit Breaker believes (charges blind)
-MP  mamorimasu → protect — Mars Protects
-NW  nayamimasu → worry — No Wards, you worry
-AF  akiramemasu → forfeit — AFK, you forfeit
+mamorimasu → protect
+  MA-MO-RI — MArs MOves in to protect                     [dota]
+
+nusumimasu → steal
+  NU-SU-MI — NYx SUcks MAna out, stealing it              [dota]
+
+tsukaimasu → use
+  TSU-KA-I — TP scroll: SUre, KAn I use it? Yes, use it   [dota]
+```
+
+And where Dota does not fit, a general mnemonic rather than a forced hero:
+
+```
+kotowarimasu → refuse
+  KO-TO-WA-RI — KOat too WARm, you refuse to wear it      [general]
+
+sagashimasu → search
+  SA-GA-SHI — SAfari GAme, SHIning torch in the dark      [general]
 ```
 
 ## Rules
 
-1. **The connection must be obvious.** "Mars Protects" works because that is what Mars does. "Alchemist Apologizes" does not — it's just a name starting with A.
-2. **No clever double meanings.** "Urn — doubt whether it heals or hurts" is weird. Keep it literal.
-3. **One code per verb.** If two verbs would share a code (e.g. TC for cook and continue), swap the English meaning to a synonym (continue → keep going → TK).
-4. **Leave it blank rather than force it.** A bad hook is worse than none. Mark blanks with `—` so King can fill them himself.
-5. **Synonyms are allowed for the English side** (give up → forfeit → AF) if it unlocks a real abbreviation.
-6. **-masu form always**, romaji, no kanji required (kanji optional in a separate column).
-7. **Sound-alikes are only used when they're free and exact** (Witch DOCtor → doko). Don't go looking for them.
+1. **The hook must be obvious.** "Mars moves in to protect" works because that
+   is what Mars does. "Alchemist Apologizes" does not — it's a name that
+   happens to start with A.
+2. **Easy beats complete.** The hook does not have to spell out every syllable.
+   Covering the first two chunks with a real image is better than a contorted
+   line that covers all four. If a natural hook lands the whole word, take it
+   — but never bend the image to get there.
+2b. **Dota first, general as the honest fallback.** Reach for a hero, item, or
+   piece of chat slang whenever one fits the sound *and* the meaning. When none
+   does, write a plain sound-alike instead — a forced hero name is exactly the
+   failure the old method had. Dota must stay the majority of the dictionary;
+   a test enforces this.
+2c. **Spell the chunk with the letter the romaji uses.** "CAr" for `KA-E-RI`
+   reads back as a C and hands you the wrong first letter. Use "KAyle".
+3. **No clever double meanings.** Keep it literal.
+4. **One hook per verb.** If two verbs would collide, swap the English side to
+   a synonym (continue → keep going).
+5. **Leave it blank rather than force it.** A bad hook is worse than none.
+   `sound` is always filled in; `hook` may be `null`.
+6. **Synonyms are allowed for the English side** (give up → forfeit) if it
+   unlocks a better hook.
+7. **-masu form always**, romaji. Kanji/kana stays in its own field, for TTS.
 
 ## Rejected approaches (don't do these)
 
-- Hero whose *name* starts with the Japanese initial + verb + in-game reason (too many forced ones)
-- First two Japanese letters → Dota name starting with that sound
-- Pure sound-alike hunting
+- **Two-letter initial codes** (`MP`, `KD`, `SB`). This was the previous method
+  and it is why the dictionary got rebuilt: the code only ever encoded the
+  first letter of the Japanese word, so it could label a verb you already knew
+  but could not get you back to one you didn't. Given "protect", `MP` tells you
+  the answer starts with M and leaves the other four syllables to raw memory.
+- Forcing a Dota hero onto a verb it does not fit, just to keep the theme pure
+  — that is what rule 2b's fallback exists to prevent
 - Japanese sentences about Dota situations
 - Kanji-family / transitive-intransitive grouping as the main method
-- Codes that are just two letters with no meaning (SE, KF, NL)
 
 ## Why this works (short version)
 
-Keyword-style mnemonics stick for picturable words; the abbreviation + connection gives an abstract verb something to picture. The hook is only scaffolding — after a few quizzes the word should come without it. So: build the code, quiz same day, quiz again 3 days later, then stop relying on the code.
+Keyword-style mnemonics stick for picturable words; a Dota image gives an
+abstract verb something to picture, and chunked sound gives recall a path back
+to the whole word rather than its initial. The hook is only scaffolding —
+after a few quizzes the word should come without it. So: build the hook, quiz
+same day, quiz again 3 days later, then stop relying on it.
 
 ## Quiz protocol
 
-Batches of 5. Prompt with the English meaning or the Dota connection; King answers the Japanese verb. Then reverse. Track duds and replace only those.
+Batches of 5. Prompt with the English meaning; King answers the Japanese verb.
+Then reverse. Track duds and replace only those.
 
 ## Dictionary file
 
-The dictionary lives in `src/data/verbs/dictionary.ts`, in course order (one verb per day). Add new verbs there in the same format.
+The dictionary lives in `src/data/verbs/dictionary.ts`, in course order (one
+verb per day). Add new verbs there in the same format.

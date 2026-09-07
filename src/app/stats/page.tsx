@@ -109,11 +109,9 @@ export default function StatsPage() {
                   if (!verb) return null;
                   return (
                     <li key={record.verbId} className="flex items-center gap-2.5">
-                      {verb.code && (
-                        <span className="px-2 py-1 rounded-md bg-error/10 text-error text-xs font-bold shrink-0">
-                          {verb.code}
-                        </span>
-                      )}
+                      <span className="px-2 py-1 rounded-md bg-error/10 text-error text-[10px] font-bold tracking-wider shrink-0">
+                        {verb.sound}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{verb.masu}</p>
                         <p className="text-xs text-text-secondary truncate">{verb.english}</p>

@@ -10,20 +10,22 @@ vi.mock('@/lib/storage', () => ({ recordAnswer: vi.fn() }));
 
 const verb: Verb = {
   id: 'v-mamorimasu',
-  code: 'MP',
+  sound: 'MA-MO-RI',
   masu: 'mamorimasu',
   japanese: 'まもります',
   english: 'protect',
-  connection: 'Mars Protects',
+  hook: 'MArs MOves in — protects the team',
+  hookKind: 'dota',
 };
 
 const other: Verb = {
   id: 'v-nigemasu',
-  code: 'NE',
+  sound: 'NI-GE',
   masu: 'nigemasu',
   japanese: 'にげます',
   english: 'escape',
-  connection: 'Nature’s prophet Escapes',
+  hook: 'Nature’s prophet GEts out — escapes by TP',
+  hookKind: 'dota',
 };
 
 function question(over: Partial<ReviewQuestion> = {}): ReviewQuestion {

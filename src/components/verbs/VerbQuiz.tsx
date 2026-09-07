@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import ProgressBar from '@/components/ui/ProgressBar';
 import Badge from '@/components/ui/Badge';
+import HookNote from './HookNote';
 
 interface VerbQuizProps {
   questions: ReviewQuestion[];
@@ -227,10 +228,10 @@ export default function VerbQuiz({ questions, weekIndex, onComplete, newVerb }: 
             </Card>
           )}
 
-          {current.verb.code && current.verb.connection && (
-            <div className="bg-primary/5 rounded-xl px-4 py-3 text-sm text-center">
-              <span className="font-bold text-primary">{current.verb.code}</span>
-              <span className="text-text-secondary"> — {current.verb.connection}</span>
+          {current.verb.hook && (
+            <div className="bg-primary/5 rounded-xl px-4 py-3 text-sm">
+              <span className="font-bold text-primary tracking-wider">{current.verb.sound}</span>
+              <HookNote verb={current.verb} className="mt-1.5 bg-transparent px-0 py-0" />
             </div>
           )}
 

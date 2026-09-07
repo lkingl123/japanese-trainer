@@ -26,8 +26,8 @@ export default function DictionaryPage() {
     return (
       v.masu.toLowerCase().includes(q) ||
       v.english.toLowerCase().includes(q) ||
-      (v.code?.toLowerCase().includes(q) ?? false) ||
-      (v.connection?.toLowerCase().includes(q) ?? false)
+      v.sound.toLowerCase().includes(q) ||
+      (v.hook?.toLowerCase().includes(q) ?? false)
     );
   });
 
@@ -70,12 +70,8 @@ export default function DictionaryPage() {
             return (
               <Card key={verb.id}>
                 <div className="flex items-start gap-3">
-                  <span
-                    className={`px-2.5 py-1 rounded-lg text-sm font-bold shrink-0 ${
-                      verb.code ? 'bg-primary/10 text-primary' : 'bg-black/5 text-text-secondary'
-                    }`}
-                  >
-                    {verb.code ?? '—'}
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold tracking-wider shrink-0 bg-primary/10 text-primary">
+                    {verb.sound}
                   </span>
 
                   <div className="flex-1 min-w-0">
@@ -88,8 +84,17 @@ export default function DictionaryPage() {
                       )}
                     </div>
                     <p className="text-sm text-text-secondary">{verb.english}</p>
-                    {verb.connection && (
-                      <p className="text-xs text-text-secondary mt-1.5 italic">{verb.connection}</p>
+                    {verb.hook && (
+                      <p className="text-xs text-text-secondary mt-1.5 italic">
+                        <span
+                          className={`not-italic font-bold mr-1 ${
+                            verb.hookKind === 'dota' ? 'text-primary' : 'text-text-secondary'
+                          }`}
+                        >
+                          {verb.hookKind === 'dota' ? 'Dota' : 'Gen'}
+                        </span>
+                        {verb.hook}
+                      </p>
                     )}
                     <p className="text-[10px] text-text-secondary mt-1.5">
                       Week {week}

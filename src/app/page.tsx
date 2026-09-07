@@ -106,11 +106,9 @@ export default function Home() {
 
                 {seen ? (
                   <>
-                    {verb.code && (
-                      <span className="w-6 shrink-0 text-xs font-bold text-primary">
-                        {verb.code}
-                      </span>
-                    )}
+                    <span className="shrink-0 text-[10px] font-bold tracking-wider text-primary">
+                      {verb.sound}
+                    </span>
                     <span>{verb.masu}</span>
                     <span className="text-text-secondary text-xs truncate">
                       {verb.english}
