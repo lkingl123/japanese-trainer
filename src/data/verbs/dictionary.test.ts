@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { verbs, getVerbById, getWeekVerbs, getTotalWeeks, WEEK_LENGTH } from './dictionary';
+import {
+  verbs,
+  getVerbById,
+  getWeekVerbs,
+  getTotalWeeks,
+  getLevelCounts,
+  getWeekLevel,
+  LEVEL_ORDER,
+  WEEK_LENGTH,
+} from './dictionary';
 
 /**
  * These tests encode the rules from docs/method.md. They are the guard against
@@ -163,5 +172,37 @@ describe('week slicing', () => {
 
   it('returns empty for a week past the end', () => {
     expect(getWeekVerbs(getTotalWeeks() + 5)).toEqual([]);
+  });
+});
+
+describe('curriculum ordering', () => {
+  it('groups the library N5 -> N4 -> N3', () => {
+    // Week slicing is positional, so this ordering IS the syllabus. A verb
+    // filed out of order would teach an N3 word inside week 1.
+    const ranks = verbs.map((v) => LEVEL_ORDER.indexOf(v.level));
+    const sorted = [...ranks].sort((a, b) => a - b);
+    expect(ranks).toEqual(sorted);
+  });
+
+  it('gives every verb a known level', () => {
+    const offenders = verbs.filter((v) => !LEVEL_ORDER.includes(v.level));
+    expect(offenders.map((v) => `${v.id}: ${v.level}`)).toEqual([]);
+  });
+
+  it('starts the course at N5', () => {
+    // The first thing taught should be the easiest level present, otherwise
+    // day 1 opens on vocabulary above the learner's grade.
+    expect(verbs[0].level).toBe('N5');
+  });
+
+  it('counts every verb into exactly one level bucket', () => {
+    const counts = getLevelCounts();
+    expect(counts.N5 + counts.N4 + counts.N3).toBe(verbs.length);
+  });
+
+  it('reports the level a week teaches', () => {
+    expect(getWeekLevel(0)).toBe('N5');
+    // Past the end of the library there is no week to report.
+    expect(getWeekLevel(getTotalWeeks() + 10)).toBeNull();
   });
 });

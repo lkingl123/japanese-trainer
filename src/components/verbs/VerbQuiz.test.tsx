@@ -10,6 +10,7 @@ vi.mock('@/lib/storage', () => ({ recordAnswer: vi.fn() }));
 
 const verb: Verb = {
   id: 'v-mamorimasu',
+  level: 'N3',
   sound: 'MA-MO-RI',
   masu: 'mamorimasu',
   japanese: 'まもります',
@@ -20,6 +21,7 @@ const verb: Verb = {
 
 const other: Verb = {
   id: 'v-nigemasu',
+  level: 'N4',
   sound: 'NI-GE',
   masu: 'nigemasu',
   japanese: 'にげます',

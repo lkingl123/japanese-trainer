@@ -9,6 +9,12 @@
 export type HookKind = 'dota' | 'general';
 
 /**
+ * JLPT level a verb belongs to. The course teaches in this order, so the level
+ * is also the curriculum's sort key — N5 first, then N4, then N3.
+ */
+export type JlptLevel = 'N5' | 'N4' | 'N3';
+
+/**
  * A single verb entry from the mnemonic dictionary.
  *
  * `sound` is the Japanese word chunked into readable syllables (the `-masu`
@@ -21,6 +27,7 @@ export type HookKind = 'dota' | 'general';
  */
 export interface Verb {
   id: string;
+  level: JlptLevel;
   sound: string; // syllable chunks, e.g. 'MA-MO-RI'
   masu: string; // romaji, -masu form (polite) — never dictionary/casual form
   japanese: string; // kana/kanji, used for TTS only
