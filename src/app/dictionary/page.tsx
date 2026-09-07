@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getProgress } from '@/lib/storage';
-import { verbs, WEEK_LENGTH } from '@/data/verbs/dictionary';
+import { getProgress, unmarkVerbKnown } from '@/lib/storage';
+import { verbs, getSyllabus, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -18,6 +18,10 @@ export default function DictionaryPage() {
   }, []);
 
   const records = progress?.records ?? {};
+  const known = new Set(progress?.knownVerbIds ?? []);
+  // Week numbers come from the active syllabus, not the raw dictionary —
+  // skipping a verb shifts everything after it up a slot.
+  const syllabus = getSyllabus(progress?.knownVerbIds ?? []);
   const q = query.trim().toLowerCase();
 
   const filtered = verbs.filter((v) => {
@@ -65,7 +69,8 @@ export default function DictionaryPage() {
             const record = records[verb.id];
             const total = record ? record.correctCount + record.incorrectCount : 0;
             const accuracy = total > 0 ? Math.round((record.correctCount / total) * 100) : null;
-            const week = Math.floor(verbs.indexOf(verb) / WEEK_LENGTH) + 1;
+            const position = syllabus.indexOf(verb);
+            const week = position < 0 ? null : Math.floor(position / WEEK_LENGTH) + 1;
 
             return (
               <Card key={verb.id}>
@@ -96,8 +101,19 @@ export default function DictionaryPage() {
                         {verb.hook}
                       </p>
                     )}
+                    {known.has(verb.id) && (
+                      <p className="text-[10px] text-text-secondary mt-1.5">
+                        Skipped — you marked this known ·{' '}
+                        <button
+                          onClick={() => setProgress(unmarkVerbKnown(verb.id))}
+                          className="underline hover:text-text"
+                        >
+                          put it back
+                        </button>
+                      </p>
+                    )}
                     <p className="text-[10px] text-text-secondary mt-1.5">
-                      Week {week}
+                      {week === null ? 'Not in the course' : `Week ${week}`}
                       {record ? ` · learned ${record.learnedOn}` : ' · not yet learned'}
                     </p>
                   </div>

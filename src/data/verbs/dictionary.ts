@@ -88,14 +88,30 @@ export function getVerbById(id: string): Verb | undefined {
   return verbs.find((v) => v.id === id);
 }
 
-/** The verbs belonging to week `index` (0-based), in course order. */
-export function getWeekVerbs(index: number): Verb[] {
-  return verbs.slice(index * WEEK_LENGTH, (index + 1) * WEEK_LENGTH);
+/**
+ * The active syllabus: the dictionary minus the verbs marked already known.
+ *
+ * Weeks are cut from this list rather than the raw dictionary, so skipping a
+ * verb re-packs everything after it. A learner who skips three N5 words gets
+ * three more real words in the same week, instead of short weeks full of holes.
+ */
+export function getSyllabus(knownVerbIds: readonly string[] = []): Verb[] {
+  if (knownVerbIds.length === 0) return verbs;
+  const known = new Set(knownVerbIds);
+  return verbs.filter((v) => !known.has(v.id));
 }
 
-/** Total number of complete or partial weeks the dictionary covers. */
-export function getTotalWeeks(): number {
-  return Math.ceil(verbs.length / WEEK_LENGTH);
+/** The verbs belonging to week `index` (0-based), in course order. */
+export function getWeekVerbs(index: number, knownVerbIds: readonly string[] = []): Verb[] {
+  const syllabus = getSyllabus(knownVerbIds);
+  return syllabus.slice(index * WEEK_LENGTH, (index + 1) * WEEK_LENGTH);
+}
+
+/** Total number of complete or partial weeks the syllabus covers. */
+export function getTotalWeeks(knownVerbIds: readonly string[] = []): number {
+  // At least one week even when everything is known, so callers that index a
+  // week always have a valid range to clamp into.
+  return Math.max(1, Math.ceil(getSyllabus(knownVerbIds).length / WEEK_LENGTH));
 }
 
 /**

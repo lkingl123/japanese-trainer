@@ -117,8 +117,9 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
   // restored from an older version, or half-written can carry a week past the
   // end of the dictionary or a day of 0 — neither should produce a broken
   // session.
-  const weekIndex = clamp(progress.weekIndex, 0, getTotalWeeks() - 1);
-  const weekVerbs = getWeekVerbs(weekIndex);
+  const known = progress.knownVerbIds;
+  const weekIndex = clamp(progress.weekIndex, 0, getTotalWeeks(known) - 1);
+  const weekVerbs = getWeekVerbs(weekIndex, known);
 
   // Day within the current week batch.
   //
@@ -154,7 +155,7 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
   // One past week cycled back in — single direction to keep the session short.
   const rotated = getRotatedWeek(progress, weekIndex);
   if (rotated !== null) {
-    const pastVerbs = getWeekVerbs(rotated);
+    const pastVerbs = getWeekVerbs(rotated, known);
     questions.push(...buildQuestionsFor(pastVerbs, 'past-week', progress, false));
   }
 
@@ -178,9 +179,10 @@ export function advanceProgress(progress: UserProgress): {
   weekIndex: number;
   rotationIndex: number;
 } {
-  const lastWeek = getTotalWeeks() - 1;
+  const known = progress.knownVerbIds;
+  const lastWeek = getTotalWeeks(known) - 1;
   const weekIndex = clamp(progress.weekIndex, 0, lastWeek);
-  const weekLength = getWeekVerbs(weekIndex).length;
+  const weekLength = getWeekVerbs(weekIndex, known).length;
   const dayOfWeek = clamp(progress.dayOfWeek, 1, weekLength + 1);
 
   // The week ends after its test day, which is the session following the last
@@ -212,9 +214,10 @@ export function advanceProgress(progress: UserProgress): {
  * taught, and the course is now in permanent review.
  */
 export function isCourseComplete(progress: UserProgress): boolean {
-  const lastWeek = getTotalWeeks() - 1;
+  const known = progress.knownVerbIds;
+  const lastWeek = getTotalWeeks(known) - 1;
   if (progress.weekIndex < lastWeek) return false;
-  return progress.dayOfWeek > getWeekVerbs(lastWeek).length;
+  return progress.dayOfWeek > getWeekVerbs(lastWeek, known).length;
 }
 
 export { WEEK_LENGTH };

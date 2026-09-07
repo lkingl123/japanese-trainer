@@ -24,6 +24,7 @@ const DEFAULT_PROGRESS: UserProgress = {
   lastActiveDate: '',
   lastSessionDate: null,
   records: {},
+  knownVerbIds: [],
 };
 
 // ===== Date helpers =====
@@ -89,13 +90,19 @@ function sanitize(parsed: Partial<UserProgress>): UserProgress {
   const longestStreak = counter(parsed.longestStreak, 0, 0);
   const currentStreak = counter(parsed.currentStreak, 0, 0);
 
+  // Deduped, and strings only — a malformed entry here would silently drop a
+  // verb from the syllabus, which is hard to notice and hard to undo.
+  const knownVerbIds = Array.isArray(parsed.knownVerbIds)
+    ? [...new Set(parsed.knownVerbIds.filter((id): id is string => typeof id === 'string'))]
+    : [];
+
   return {
     dayIndex: counter(parsed.dayIndex, 1, 1),
     dayOfWeek: counter(parsed.dayOfWeek, 1, 1),
     // Bounded above as well: a week past the end of the dictionary would make
     // the home screen render an empty week while the session engine clamps to
     // a real one, so the two screens would disagree.
-    weekIndex: Math.min(counter(parsed.weekIndex, 0, 0), getTotalWeeks() - 1),
+    weekIndex: Math.min(counter(parsed.weekIndex, 0, 0), getTotalWeeks(knownVerbIds) - 1),
     rotationIndex: counter(parsed.rotationIndex, 0, 0),
     currentStreak,
     // A best that is lower than the current run is not possible.
@@ -103,6 +110,7 @@ function sanitize(parsed: Partial<UserProgress>): UserProgress {
     lastActiveDate: dateField(parsed.lastActiveDate, ''),
     lastSessionDate: dateField(parsed.lastSessionDate, null),
     records,
+    knownVerbIds,
   };
 }
 
@@ -256,6 +264,33 @@ export async function completeSession(
 export async function isSessionCompleteToday(): Promise<boolean> {
   const progress = await getProgress();
   return progress.lastSessionDate === getTodayString();
+}
+
+/**
+ * Marks a verb as already known, so the course skips past it.
+ *
+ * This is not the same as learning it: a skipped verb never enters `records`,
+ * so it is never quizzed, never counted as needing work, and never shown as a
+ * missed answer. It is simply removed from the syllabus.
+ *
+ * Skipping deliberately does not consume the day — a learner who already knows
+ * a word should reach one they don't in the same sitting. Burning the day
+ * would punish honesty and make skipping worse than lying.
+ */
+export function markVerbKnown(verbId: string): UserProgress {
+  return mutate((current) =>
+    current.knownVerbIds.includes(verbId)
+      ? current
+      : { ...current, knownVerbIds: [...current.knownVerbIds, verbId] }
+  );
+}
+
+/** Undoes a skip, putting the verb back into the syllabus. */
+export function unmarkVerbKnown(verbId: string): UserProgress {
+  return mutate((current) => ({
+    ...current,
+    knownVerbIds: current.knownVerbIds.filter((id) => id !== verbId),
+  }));
 }
 
 // ===== Backup / restore =====

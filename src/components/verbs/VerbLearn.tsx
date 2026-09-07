@@ -9,6 +9,11 @@ import HookNote from './HookNote';
 interface VerbLearnProps {
   verb: Verb;
   onContinue: () => void;
+  /**
+   * Drops this verb from the syllabus and pulls the next one in. Absent on the
+   * last verb of the course, where there is nothing left to skip to.
+   */
+  onAlreadyKnow?: () => void;
 }
 
 /**
@@ -16,7 +21,7 @@ interface VerbLearnProps {
  * the mnemonic leads — everywhere else it stays hidden until after an answer,
  * because the hook is a reminder, not the answer.
  */
-export default function VerbLearn({ verb, onContinue }: VerbLearnProps) {
+export default function VerbLearn({ verb, onContinue, onAlreadyKnow }: VerbLearnProps) {
   return (
     <div className="slide-up">
       <Card className="mb-6">
@@ -39,6 +44,15 @@ export default function VerbLearn({ verb, onContinue }: VerbLearnProps) {
       <Button onClick={onContinue} size="lg" className="w-full">
         Start review →
       </Button>
+
+      {onAlreadyKnow && (
+        <button
+          onClick={onAlreadyKnow}
+          className="w-full mt-3 py-2.5 text-sm text-text-secondary hover:text-text rounded-xl"
+        >
+          I already know this — skip it
+        </button>
+      )}
     </div>
   );
 }

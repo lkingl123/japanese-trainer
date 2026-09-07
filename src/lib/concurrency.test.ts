@@ -123,6 +123,7 @@ describe('the final week keeps getting reviewed', () => {
       lastActiveDate: '',
       lastSessionDate: null,
       records: {},
+      knownVerbIds: [],
     };
     expect(isCourseComplete(progress)).toBe(true);
 
@@ -155,6 +156,7 @@ describe('the final week keeps getting reviewed', () => {
       lastActiveDate: '',
       lastSessionDate: null,
       records: {},
+      knownVerbIds: [],
     };
     const currentWeek = getWeekVerbs(2).map((v) => v.id);
     const past = buildDailySession(progress, '2026-09-03').questions.filter(

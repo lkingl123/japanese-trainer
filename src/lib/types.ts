@@ -90,6 +90,12 @@ export interface UserProgress {
   lastActiveDate: string; // YYYY-MM-DD
   lastSessionDate: string | null; // last completed session
   records: Record<string, VerbRecord>; // verbId -> record
+  /**
+   * Verbs the learner marked "I already know this". They are dropped from the
+   * syllabus entirely — never taught, never quizzed, never counted as due.
+   * Distinct from `records`, which tracks verbs actually being learned.
+   */
+  knownVerbIds: string[];
 }
 
 // ===== Session Types =====
