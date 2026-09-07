@@ -96,3 +96,20 @@ describe('skipping a known verb', () => {
     expect(getSyllabus()).toBe(verbs);
   });
 });
+
+describe('screens agree with the session engine', () => {
+  it('shows the same week the engine teaches', () => {
+    // The home week list and the session must read the same syllabus. When the
+    // list read the raw dictionary it showed a skipped verb as the day's
+    // lesson while the session taught the next unskipped one.
+    const skipped = [verbs[0].id];
+    const progress = makeProgress({ knownVerbIds: skipped });
+
+    const listWeek = getWeekVerbs(progress.weekIndex, progress.knownVerbIds);
+    const session = buildDailySession(progress, DATE);
+
+    expect(listWeek.map((v) => v.id)).not.toContain(skipped[0]);
+    // Day 1 of the list is the verb today's session actually teaches.
+    expect(listWeek[0].id).toBe(session.newVerb!.id);
+  });
+});

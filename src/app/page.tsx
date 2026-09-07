@@ -30,7 +30,7 @@ export default function Home() {
   }
 
   const doneToday = progress.lastSessionDate === getTodayString();
-  const weekVerbs = getWeekVerbs(progress.weekIndex);
+  const weekVerbs = getWeekVerbs(progress.weekIndex, progress.knownVerbIds);
   const { dayOfWeek, currentStreak } = progress;
   const isWeekTest = dayOfWeek > weekVerbs.length;
   // Every verb taught: the course stays in review from here on.

@@ -75,7 +75,7 @@ export default function DictionaryPage() {
             return (
               <Card key={verb.id}>
                 <div className="flex items-start gap-3">
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold tracking-wider shrink-0 bg-primary/10 text-primary">
+                  <span className="w-24 shrink-0 px-2 py-1 rounded-lg text-[10px] leading-tight font-bold tracking-wider text-center bg-primary/10 text-primary">
                     {verb.sound}
                   </span>
 
