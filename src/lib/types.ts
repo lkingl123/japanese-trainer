@@ -1,23 +1,39 @@
 // ===== Verb Types =====
 
 /**
+ * Which memory system a verb's hook is built on. Dota is the default and
+ * covers most of the dictionary; `general` is the honest fallback for verbs
+ * where no hero, item, or piece of slang fits the sound *and* the meaning.
+ * Forcing Dota onto those produced the weak hooks the old method suffered from.
+ */
+export type HookKind = 'dota' | 'general';
+
+/**
+ * JLPT level a verb belongs to. The course teaches in this order, so the level
+ * is also the curriculum's sort key — N5 first, then N4, then N3.
+ */
+export type JlptLevel = 'N5' | 'N4' | 'N3';
+
+/**
  * A single verb entry from the mnemonic dictionary.
  *
- * The mnemonic `code` is a two-letter abbreviation King already knows:
- * letter 1 = first letter of the Japanese verb (romaji, -masu form),
- * letter 2 = first letter of the English meaning. `connection` is the
- * one-line hook that ties the code to the meaning.
+ * `sound` is the Japanese word chunked into readable syllables (the `-masu`
+ * tail dropped, since it never varies). `hook` is the one-line image that
+ * pulls those sounds back, and `hookKind` says which system it came from.
  *
- * `code` and `connection` are null for entries with no good hook yet —
- * per the method spec, a bad hook is worse than none.
+ * `hook` and `hookKind` are null together for entries with no honest hook yet
+ * — per the method spec, a bad hook is worse than none. `sound` is always
+ * present, so even a hookless verb shows its syllable breakdown.
  */
 export interface Verb {
   id: string;
-  code: string | null;
+  level: JlptLevel;
+  sound: string; // syllable chunks, e.g. 'MA-MO-RI'
   masu: string; // romaji, -masu form (polite) — never dictionary/casual form
   japanese: string; // kana/kanji, used for TTS only
   english: string;
-  connection: string | null;
+  hook: string | null;
+  hookKind: HookKind | null;
 }
 
 /** Which way a verb is being tested. */
@@ -74,6 +90,12 @@ export interface UserProgress {
   lastActiveDate: string; // YYYY-MM-DD
   lastSessionDate: string | null; // last completed session
   records: Record<string, VerbRecord>; // verbId -> record
+  /**
+   * Verbs the learner marked "I already know this". They are dropped from the
+   * syllabus entirely — never taught, never quizzed, never counted as due.
+   * Distinct from `records`, which tracks verbs actually being learned.
+   */
+  knownVerbIds: string[];
 }
 
 // ===== Session Types =====

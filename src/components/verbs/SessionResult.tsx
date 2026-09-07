@@ -43,16 +43,14 @@ export default function SessionResult({ result, streak, isWeekTest }: SessionRes
           <ul className="space-y-2.5">
             {missed.map((verb) => (
               <li key={verb.id} className="flex items-center gap-3">
-                {verb.code && (
-                  <span className="px-2 py-1 rounded-md bg-error/10 text-error text-xs font-bold shrink-0">
-                    {verb.code}
-                  </span>
-                )}
+                <span className="px-2 py-1 rounded-md bg-error/10 text-error text-[10px] font-bold tracking-wider shrink-0">
+                  {verb.sound}
+                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{verb.masu}</p>
                   <p className="text-xs text-text-secondary truncate">
                     {verb.english}
-                    {verb.connection ? ` — ${verb.connection}` : ''}
+                    {verb.hook ? ` — ${verb.hook}` : ''}
                   </p>
                 </div>
                 <AudioButton japanese={verb.japanese} size="sm" />

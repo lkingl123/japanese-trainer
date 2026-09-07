@@ -20,6 +20,7 @@ function makeProgress(over: Partial<UserProgress> = {}): UserProgress {
     lastActiveDate: '',
     lastSessionDate: null,
     records: {},
+    knownVerbIds: [],
     ...over,
   };
 }

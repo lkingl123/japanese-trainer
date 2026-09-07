@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { UserProgress, DailySession, SessionResult as Result } from '@/lib/types';
-import { getProgress, completeSession, getTodayString } from '@/lib/storage';
+import {
+  getProgress,
+  completeSession,
+  getTodayString,
+  markVerbKnown,
+} from '@/lib/storage';
 import { buildDailySession, advanceProgress } from '@/lib/session';
 import VerbLearn from '@/components/verbs/VerbLearn';
 import VerbQuiz from '@/components/verbs/VerbQuiz';
@@ -35,6 +40,25 @@ export default function TodayPage() {
       setStage(s.newVerb ? 'learn' : 'quiz');
     });
   }, []);
+
+  /**
+   * "I already know this": drop the verb from the syllabus and pull the next
+   * one into today's slot.
+   *
+   * The day is deliberately not consumed. Skipping re-packs the weeks, so the
+   * same day index now points at the next unknown verb — the learner reaches
+   * something new in this sitting rather than being sent away until tomorrow.
+   */
+  async function handleAlreadyKnow() {
+    if (!session?.newVerb) return;
+
+    const updated = markVerbKnown(session.newVerb.id);
+    setProgress(updated);
+
+    const next = buildDailySession(updated, getTodayString());
+    setSession(next);
+    setStage(next.newVerb ? 'learn' : 'quiz');
+  }
 
   async function handleQuizComplete(r: Result) {
     setResult(r);
@@ -90,7 +114,11 @@ export default function TodayPage() {
       )}
 
       {stage === 'learn' && session.newVerb && (
-        <VerbLearn verb={session.newVerb} onContinue={() => setStage('quiz')} />
+        <VerbLearn
+          verb={session.newVerb}
+          onContinue={() => setStage('quiz')}
+          onAlreadyKnow={handleAlreadyKnow}
+        />
       )}
 
       {stage === 'quiz' && (

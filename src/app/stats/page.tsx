@@ -7,7 +7,7 @@ import Badge from '@/components/ui/Badge';
 import ProgressBar from '@/components/ui/ProgressBar';
 import AudioButton from '@/components/ui/AudioButton';
 import { getProgress } from '@/lib/storage';
-import { verbs, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
+import { getSyllabus, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
 export default function StatsPage() {
@@ -40,7 +40,10 @@ export default function StatsPage() {
     .filter((r) => r.incorrectCount > 0 && r.streak === 0)
     .sort((a, b) => b.incorrectCount - a.incorrectCount);
 
-  const weeksLeft = Math.ceil((verbs.length - learned) / WEEK_LENGTH);
+  // Skipped verbs left the syllabus, so they must not count toward the total
+  // — including them would inflate the work left and put 100% out of reach.
+  const syllabus = getSyllabus(progress?.knownVerbIds ?? []);
+  const weeksLeft = Math.ceil((syllabus.length - learned) / WEEK_LENGTH);
 
   return (
     <div className="px-4 pt-6">
@@ -68,13 +71,13 @@ export default function StatsPage() {
       <Card className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold">
-            {learned} of {verbs.length} verbs
+            {learned} of {syllabus.length} verbs
           </h2>
           <Badge variant="primary">Week {progress.weekIndex + 1}</Badge>
         </div>
-        <ProgressBar value={(learned / verbs.length) * 100} className="mb-2" />
+        <ProgressBar value={(learned / syllabus.length) * 100} className="mb-2" />
         <p className="text-xs text-text-secondary">
-          {learned === verbs.length
+          {learned === syllabus.length
             ? 'Every verb learned.'
             : `${weeksLeft} ${weeksLeft === 1 ? 'week' : 'weeks'} to go · ${answers} answers so far`}
         </p>
@@ -109,11 +112,9 @@ export default function StatsPage() {
                   if (!verb) return null;
                   return (
                     <li key={record.verbId} className="flex items-center gap-2.5">
-                      {verb.code && (
-                        <span className="px-2 py-1 rounded-md bg-error/10 text-error text-xs font-bold shrink-0">
-                          {verb.code}
-                        </span>
-                      )}
+                      <span className="px-2 py-1 rounded-md bg-error/10 text-error text-[10px] font-bold tracking-wider shrink-0">
+                        {verb.sound}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{verb.masu}</p>
                         <p className="text-xs text-text-secondary truncate">{verb.english}</p>

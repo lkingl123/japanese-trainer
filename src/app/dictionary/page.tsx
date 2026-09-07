@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getProgress } from '@/lib/storage';
-import { verbs, WEEK_LENGTH } from '@/data/verbs/dictionary';
+import { getProgress, unmarkVerbKnown } from '@/lib/storage';
+import { verbs, getSyllabus, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -18,6 +18,10 @@ export default function DictionaryPage() {
   }, []);
 
   const records = progress?.records ?? {};
+  const known = new Set(progress?.knownVerbIds ?? []);
+  // Week numbers come from the active syllabus, not the raw dictionary —
+  // skipping a verb shifts everything after it up a slot.
+  const syllabus = getSyllabus(progress?.knownVerbIds ?? []);
   const q = query.trim().toLowerCase();
 
   const filtered = verbs.filter((v) => {
@@ -26,8 +30,8 @@ export default function DictionaryPage() {
     return (
       v.masu.toLowerCase().includes(q) ||
       v.english.toLowerCase().includes(q) ||
-      (v.code?.toLowerCase().includes(q) ?? false) ||
-      (v.connection?.toLowerCase().includes(q) ?? false)
+      v.sound.toLowerCase().includes(q) ||
+      (v.hook?.toLowerCase().includes(q) ?? false)
     );
   });
 
@@ -65,17 +69,14 @@ export default function DictionaryPage() {
             const record = records[verb.id];
             const total = record ? record.correctCount + record.incorrectCount : 0;
             const accuracy = total > 0 ? Math.round((record.correctCount / total) * 100) : null;
-            const week = Math.floor(verbs.indexOf(verb) / WEEK_LENGTH) + 1;
+            const position = syllabus.indexOf(verb);
+            const week = position < 0 ? null : Math.floor(position / WEEK_LENGTH) + 1;
 
             return (
               <Card key={verb.id}>
                 <div className="flex items-start gap-3">
-                  <span
-                    className={`px-2.5 py-1 rounded-lg text-sm font-bold shrink-0 ${
-                      verb.code ? 'bg-primary/10 text-primary' : 'bg-black/5 text-text-secondary'
-                    }`}
-                  >
-                    {verb.code ?? '—'}
+                  <span className="w-24 shrink-0 px-2 py-1 rounded-lg text-[10px] leading-tight font-bold tracking-wider text-center bg-primary/10 text-primary">
+                    {verb.sound}
                   </span>
 
                   <div className="flex-1 min-w-0">
@@ -88,11 +89,31 @@ export default function DictionaryPage() {
                       )}
                     </div>
                     <p className="text-sm text-text-secondary">{verb.english}</p>
-                    {verb.connection && (
-                      <p className="text-xs text-text-secondary mt-1.5 italic">{verb.connection}</p>
+                    {verb.hook && (
+                      <p className="text-xs text-text-secondary mt-1.5 italic">
+                        <span
+                          className={`not-italic font-bold mr-1 ${
+                            verb.hookKind === 'dota' ? 'text-primary' : 'text-text-secondary'
+                          }`}
+                        >
+                          {verb.hookKind === 'dota' ? 'Dota' : 'Gen'}
+                        </span>
+                        {verb.hook}
+                      </p>
+                    )}
+                    {known.has(verb.id) && (
+                      <p className="text-[10px] text-text-secondary mt-1.5">
+                        Skipped — you marked this known ·{' '}
+                        <button
+                          onClick={() => setProgress(unmarkVerbKnown(verb.id))}
+                          className="underline hover:text-text"
+                        >
+                          put it back
+                        </button>
+                      </p>
                     )}
                     <p className="text-[10px] text-text-secondary mt-1.5">
-                      Week {week}
+                      {week === null ? 'Not in the course' : `Week ${week}`}
                       {record ? ` · learned ${record.learnedOn}` : ' · not yet learned'}
                     </p>
                   </div>
