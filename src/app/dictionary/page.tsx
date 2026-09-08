@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getProgress, unmarkVerbKnown } from '@/lib/storage';
+import { loadProgressWithSync, unmarkVerbKnown } from '@/lib/storage';
 import { verbs, getSyllabus, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 import Card from '@/components/ui/Card';
@@ -14,7 +14,7 @@ export default function DictionaryPage() {
   const [onlyLearned, setOnlyLearned] = useState(false);
 
   useEffect(() => {
-    getProgress().then(setProgress);
+    loadProgressWithSync().then(setProgress);
   }, []);
 
   const records = progress?.records ?? {};

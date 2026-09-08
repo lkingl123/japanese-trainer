@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { UserProgress, DailySession, SessionResult as Result } from '@/lib/types';
 import {
   getProgress,
+  loadProgressWithSync,
   completeSession,
   getTodayString,
   markVerbKnown,
@@ -25,7 +26,7 @@ export default function TodayPage() {
   const [streak, setStreak] = useState(0);
 
   useEffect(() => {
-    getProgress().then((p) => {
+    loadProgressWithSync().then((p) => {
       setProgress(p);
       setStreak(p.currentStreak);
 
