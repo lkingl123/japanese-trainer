@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Card from '@/components/ui/Card';
-import { getProgress, getTodayString } from '@/lib/storage';
+import { loadProgressWithSync, getTodayString } from '@/lib/storage';
 import { getWeekVerbs } from '@/data/verbs/dictionary';
 import { isCourseComplete } from '@/lib/session';
 import { UserProgress } from '@/lib/types';
@@ -18,7 +18,7 @@ export default function Home() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
 
   useEffect(() => {
-    getProgress().then(setProgress);
+    loadProgressWithSync().then(setProgress);
   }, []);
 
   if (!progress) {

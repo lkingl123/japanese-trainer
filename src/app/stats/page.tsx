@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import ProgressBar from '@/components/ui/ProgressBar';
 import AudioButton from '@/components/ui/AudioButton';
-import { getProgress } from '@/lib/storage';
+import { loadProgressWithSync } from '@/lib/storage';
 import { verbs, getSyllabus, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
@@ -14,7 +14,7 @@ export default function StatsPage() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
 
   useEffect(() => {
-    getProgress().then(setProgress);
+    loadProgressWithSync().then(setProgress);
   }, []);
 
   if (!progress) {

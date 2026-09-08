@@ -1,6 +1,7 @@
 'use client';
 
 import { UserProgress, VerbRecord } from './types';
+import { fetchRemoteProgress, pushRemoteProgress, isSyncConfigured } from './sync';
 import { getTotalWeeks } from '@/data/verbs/dictionary';
 
 /**
@@ -145,6 +146,59 @@ function write(progress: UserProgress): void {
  *
  * Async only so callers don't all have to change; it never actually waits.
  */
+/**
+ * Picks the further-along of two progress blobs.
+ *
+ * Devices go offline — a flight, a dead hotel wifi — and both copies can move
+ * on independently. There is no way to truly reconcile two divergent histories
+ * without a per-answer log, so the rule is deliberately simple and lossy in
+ * one direction only: keep whichever has seen more sessions, and never let a
+ * stale copy overwrite a fresher one.
+ *
+ * dayIndex is the tiebreaker rather than a timestamp because it counts actual
+ * sessions completed, which is what "further along" means here. A clock that
+ * is wrong on one device cannot roll the course backwards.
+ */
+export function furtherAlong(a: UserProgress, b: UserProgress): UserProgress {
+  if (a.dayIndex !== b.dayIndex) return a.dayIndex > b.dayIndex ? a : b;
+
+  // Same day: prefer the one that knows about more verbs, so a session
+  // finished on one device is not lost to an idle one that merely synced.
+  const aKnown = Object.keys(a.records).length + a.knownVerbIds.length;
+  const bKnown = Object.keys(b.records).length + b.knownVerbIds.length;
+  if (aKnown !== bKnown) return aKnown > bKnown ? a : b;
+
+  // Genuinely equivalent — keep the local copy to avoid a pointless write.
+  return a;
+}
+
+/**
+ * Loads progress, preferring whichever of local or cloud is further along.
+ *
+ * Call this once on startup. Every other read uses getProgress(), which stays
+ * synchronous-feeling and never waits on the network.
+ */
+export async function loadProgressWithSync(): Promise<UserProgress> {
+  const local = await getProgress();
+  if (!isSyncConfigured()) return local;
+
+  const remote = await fetchRemoteProgress();
+  if (!remote) return local;
+
+  const winner = furtherAlong(local, sanitize(remote));
+
+  // Adopt the cloud copy locally so the rest of the session reads one source.
+  if (winner !== local) {
+    cache = winner;
+    write(winner);
+  } else {
+    // Local was ahead; make sure the cloud catches up.
+    void pushRemoteProgress(local);
+  }
+
+  return winner;
+}
+
 export async function getProgress(): Promise<UserProgress> {
   if (cache) return cache;
 
@@ -186,6 +240,10 @@ function mutate(apply: (current: UserProgress) => UserProgress): UserProgress {
   const merged = apply(read());
   cache = merged;
   write(merged);
+  // Mirror to the cloud without waiting. The local write above already made
+  // this durable on the device; the network is a bonus, so a failure here must
+  // not throw into a caller mid-session.
+  void pushRemoteProgress(merged);
   return merged;
 }
 
@@ -314,6 +372,12 @@ export function importProgress(json: string): UserProgress {
 
 /** Wipes all progress and starts the course over. */
 export function resetProgress(): void {
-  cache = { ...DEFAULT_PROGRESS, records: {} };
+  // records and knownVerbIds are rebuilt rather than spread: a shallow copy
+  // would share DEFAULT_PROGRESS's own array, so a later skip would mutate the
+  // default itself and survive the next reset.
+  cache = { ...DEFAULT_PROGRESS, records: {}, knownVerbIds: [] };
   write(cache);
+  // Push the reset too, or the next startup would pull the old progress back
+  // from the cloud and undo it.
+  void pushRemoteProgress(cache);
 }
