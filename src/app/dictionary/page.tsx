@@ -11,7 +11,7 @@ import AudioButton from '@/components/ui/AudioButton';
 export default function DictionaryPage() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [query, setQuery] = useState('');
-  const [onlyLearned, setOnlyLearned] = useState(false);
+  const [onlyKnown, setOnlyKnown] = useState(false);
 
   useEffect(() => {
     loadProgressWithSync().then(setProgress);
@@ -25,7 +25,8 @@ export default function DictionaryPage() {
   const q = query.trim().toLowerCase();
 
   const filtered = verbs.filter((v) => {
-    if (onlyLearned && !records[v.id]) return false;
+    // Known = learned through a session, or marked already known.
+    if (onlyKnown && !records[v.id] && !known.has(v.id)) return false;
     if (!q) return true;
     return (
       v.masu.toLowerCase().includes(q) ||
@@ -53,12 +54,12 @@ export default function DictionaryPage() {
       />
 
       <button
-        onClick={() => setOnlyLearned((v) => !v)}
+        onClick={() => setOnlyKnown((v) => !v)}
         className={`mb-5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-          onlyLearned ? 'bg-primary text-white' : 'bg-black/5 text-text-secondary'
+          onlyKnown ? 'bg-primary text-white' : 'bg-black/5 text-text-secondary'
         }`}
       >
-        {onlyLearned ? '✓ Learned only' : 'Learned only'}
+        {onlyKnown ? '✓ Verbs I know' : 'Verbs I know'}
       </button>
 
       {filtered.length === 0 ? (
