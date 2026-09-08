@@ -7,7 +7,7 @@ import Badge from '@/components/ui/Badge';
 import ProgressBar from '@/components/ui/ProgressBar';
 import AudioButton from '@/components/ui/AudioButton';
 import { getProgress } from '@/lib/storage';
-import { getSyllabus, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
+import { verbs, getSyllabus, getVerbById, WEEK_LENGTH } from '@/data/verbs/dictionary';
 import { UserProgress } from '@/lib/types';
 
 export default function StatsPage() {
@@ -40,9 +40,13 @@ export default function StatsPage() {
     .filter((r) => r.incorrectCount > 0 && r.streak === 0)
     .sort((a, b) => b.incorrectCount - a.incorrectCount);
 
-  // Skipped verbs left the syllabus, so they must not count toward the total
-  // — including them would inflate the work left and put 100% out of reach.
-  const syllabus = getSyllabus(progress?.knownVerbIds ?? []);
+  // A skipped verb is vocabulary the learner already has, not a verb removed
+  // from the world. It counts toward what they know; it just needs no lessons.
+  const skipped = progress.knownVerbIds.length;
+  const known = learned + skipped;
+
+  // Lessons still to run cover only the unskipped verbs — the syllabus.
+  const syllabus = getSyllabus(progress.knownVerbIds);
   const weeksLeft = Math.ceil((syllabus.length - learned) / WEEK_LENGTH);
 
   return (
@@ -71,15 +75,16 @@ export default function StatsPage() {
       <Card className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-semibold">
-            {learned} of {syllabus.length} verbs
+            {known} of {verbs.length} verbs
           </h2>
           <Badge variant="primary">Week {progress.weekIndex + 1}</Badge>
         </div>
-        <ProgressBar value={(learned / syllabus.length) * 100} className="mb-2" />
+        <ProgressBar value={(known / verbs.length) * 100} className="mb-2" />
         <p className="text-xs text-text-secondary">
-          {learned === syllabus.length
-            ? 'Every verb learned.'
+          {known === verbs.length
+            ? 'Every verb known.'
             : `${weeksLeft} ${weeksLeft === 1 ? 'week' : 'weeks'} to go · ${answers} answers so far`}
+          {skipped > 0 ? ` · ${skipped} already knew` : ''}
         </p>
       </Card>
 

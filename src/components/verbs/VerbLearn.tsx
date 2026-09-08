@@ -50,7 +50,7 @@ export default function VerbLearn({ verb, onContinue, onAlreadyKnow }: VerbLearn
           onClick={onAlreadyKnow}
           className="w-full mt-3 py-2.5 text-sm text-text-secondary hover:text-text rounded-xl"
         >
-          I already know this — skip it
+          I already know this
         </button>
       )}
     </div>

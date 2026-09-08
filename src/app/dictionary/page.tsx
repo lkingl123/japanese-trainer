@@ -103,19 +103,21 @@ export default function DictionaryPage() {
                     )}
                     {known.has(verb.id) && (
                       <p className="text-[10px] text-text-secondary mt-1.5">
-                        Skipped — you marked this known ·{' '}
+                        Already known — no lessons needed ·{' '}
                         <button
                           onClick={() => setProgress(unmarkVerbKnown(verb.id))}
                           className="underline hover:text-text"
                         >
-                          put it back
+                          teach it anyway
                         </button>
                       </p>
                     )}
-                    <p className="text-[10px] text-text-secondary mt-1.5">
-                      {week === null ? 'Not in the course' : `Week ${week}`}
-                      {record ? ` · learned ${record.learnedOn}` : ' · not yet learned'}
-                    </p>
+                    {!known.has(verb.id) && (
+                      <p className="text-[10px] text-text-secondary mt-1.5">
+                        {week === null ? 'Not scheduled' : `Week ${week}`}
+                        {record ? ` · learned ${record.learnedOn}` : ' · not yet learned'}
+                      </p>
+                    )}
                   </div>
 
                   <AudioButton japanese={verb.japanese} size="sm" />

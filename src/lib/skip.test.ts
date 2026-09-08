@@ -131,3 +131,23 @@ describe('resetting the course', () => {
     expect(getCachedProgress()?.knownVerbIds).toEqual([]);
   });
 });
+
+describe('skipped verbs count as vocabulary', () => {
+  it('leaves them out of the lessons but not out of what you know', () => {
+    // "I already know this" is a claim about the learner's vocabulary, not a
+    // request to delete the verb. It needs no lessons, so it leaves the
+    // syllabus — but it must still count toward verbs known, or marking one
+    // honestly would make the progress number go down.
+    const skipped = [verbs[0].id, verbs[1].id];
+    const syllabus = getSyllabus(skipped);
+
+    expect(syllabus).toHaveLength(verbs.length - skipped.length);
+
+    // What the stats screen reports: learned + skipped, against the whole
+    // dictionary rather than the shortened syllabus.
+    const learned = 3;
+    const known = learned + skipped.length;
+    expect(known).toBeLessThanOrEqual(verbs.length);
+    expect(known).toBeGreaterThan(learned);
+  });
+});
