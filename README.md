@@ -21,12 +21,14 @@ kotowarimasu → refuse
 
 | Day | What happens |
 |-----|--------------|
-| 1–6 | Learn **1 new verb**, then get re-tested on the earlier days of this week (both directions) |
-| 7 | No new verb — the **whole week** is tested together, both directions |
-| Every day | Plus **one past week** cycled back in on rotation |
+| 1–6 | Learn **1 new verb**, then get re-tested on the earlier days of this week |
+| 7 | No new verb — the **whole week** is tested together |
+| Every day | Leftover slots are filled with **random verbs from past weeks** |
 
-A session is roughly 14 questions and stays that size no matter how large the
-dictionary grows — past weeks rotate rather than all being tested every day.
+A session is **hard-capped at 10 questions** (`MAX_QUESTIONS` in
+`src/lib/session.ts`), new verb included. This week's verbs are asked once each
+in a random direction, the rest is a random draw from everything learned
+before, the order is shuffled, and the new verb always comes last.
 
 ## Rules baked into the app
 
@@ -100,8 +102,9 @@ is local, which is also what happens if Supabase is unreachable.
   unique ids/verbs/meanings, sound chunks that are a real prefix of the romaji,
   every hook grounded in its own first chunk, and Dota staying the majority.
 - **`session.test.ts`** — the scheduling. Walks the entire course day by day and
-  asserts every verb is taught exactly once in order, sessions stay bounded, and
-  the past-week rotation never repeats the week being learned.
+  asserts every verb is taught exactly once in order,
+  no session exceeds the 10-question cap, and past-week refreshers never
+  repeat the week being learned.
 - **`skip.test.ts`** — that a skipped verb leaves the lessons but still counts as
   vocabulary, that skipping costs no day, and that the home screen and the
   session engine read the same syllabus.

@@ -109,7 +109,7 @@ describe('answers before progress is loaded', () => {
 });
 
 describe('the final week keeps getting reviewed', () => {
-  it('appears in the rotation once the course is finished', async () => {
+  it('is tested every day once the course is finished', async () => {
     const lastWeek = getTotalWeeks() - 1;
     const finalVerbs = getWeekVerbs(lastWeek).map((v) => v.id);
 
@@ -127,20 +127,11 @@ describe('the final week keeps getting reviewed', () => {
     };
     expect(isCourseComplete(progress)).toBe(true);
 
-    // Every week, the final one included, should surface as a refresher.
-    const refreshedWeeks = new Set<number>();
-    for (let i = 0; i < getTotalWeeks() * 2; i++) {
-      const past = buildDailySession(progress, '2026-09-03').questions.filter(
-        (q) => q.source === 'past-week'
-      );
-      if (past.length > 0) {
-        const isFinal = finalVerbs.includes(past[0].verb.id);
-        refreshedWeeks.add(isFinal ? lastWeek : -1);
-      }
+    for (let i = 0; i < 5; i++) {
+      const asked = buildDailySession(progress, '2026-09-03').questions.map((q) => q.verb.id);
+      expect(finalVerbs.every((id) => asked.includes(id))).toBe(true);
       progress = { ...progress, ...advanceProgress(progress) };
     }
-
-    expect(refreshedWeeks.has(lastWeek)).toBe(true);
   });
 
   it('excludes the current week while still learning', async () => {

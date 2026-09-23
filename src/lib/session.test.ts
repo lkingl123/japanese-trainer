@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildDailySession, advanceProgress, WEEK_LENGTH } from './session';
+import { buildDailySession, advanceProgress, WEEK_LENGTH, MAX_QUESTIONS } from './session';
 import { verbs, getWeekVerbs, getTotalWeeks } from '@/data/verbs/dictionary';
-import { UserProgress, VerbRecord } from './types';
+import { UserProgress } from './types';
 
 const DATE = '2026-09-03';
 
@@ -17,19 +17,6 @@ function makeProgress(over: Partial<UserProgress> = {}): UserProgress {
     lastSessionDate: null,
     records: {},
     knownVerbIds: [],
-    ...over,
-  };
-}
-
-function makeRecord(verbId: string, over: Partial<VerbRecord> = {}): VerbRecord {
-  return {
-    verbId,
-    learnedOn: DATE,
-    weekIndex: 0,
-    correctCount: 0,
-    incorrectCount: 0,
-    streak: 0,
-    lastTested: null,
     ...over,
   };
 }
@@ -94,53 +81,52 @@ describe('the day-7 week test', () => {
     expect(session.newVerb).toBeNull();
   });
 
-  it('tests the whole week in both directions', () => {
+  it('tests every verb of the week, within the cap', () => {
     const test = session.questions.filter((q) => q.source === 'week-test');
-    expect(test).toHaveLength(WEEK_LENGTH * 2);
+    expect(test).toHaveLength(MAX_QUESTIONS);
     expect(new Set(test.map((q) => q.verb.id))).toEqual(
       new Set(getWeekVerbs(0).map((v) => v.id))
     );
   });
 });
 
-describe('past-week rotation', () => {
+describe('past-week refreshers', () => {
   it('adds no refresher during the very first week', () => {
     const session = buildDailySession(makeProgress({ dayIndex: 3, dayOfWeek: 3 }), DATE);
     expect(session.questions.some((q) => q.source === 'past-week')).toBe(false);
   });
 
-  it('cycles one past week back in, single direction to stay short', () => {
+  it('fills the leftover slots with past verbs', () => {
+    // Day 3 of week 4: 2 this-week verbs + the new one, so 7 slots are left.
     const session = buildDailySession(
-      makeProgress({ dayIndex: WEEK_LENGTH + 2, dayOfWeek: 1, weekIndex: 1, rotationIndex: 0 }),
+      makeProgress({ dayIndex: 24, dayOfWeek: 3, weekIndex: 3 }),
       DATE
     );
     const past = session.questions.filter((q) => q.source === 'past-week');
-    expect(past).toHaveLength(WEEK_LENGTH);
-    expect(new Set(past.map((q) => q.direction))).toEqual(new Set(['en-to-jp']));
-    expect(new Set(past.map((q) => q.verb.id))).toEqual(
-      new Set(getWeekVerbs(0).map((v) => v.id))
-    );
+    expect(past).toHaveLength(MAX_QUESTIONS - 3);
+    expect(new Set(past.map((q) => q.verb.id)).size).toBe(past.length);
+    const earlier = [0, 1, 2].flatMap((w) => getWeekVerbs(w).map((v) => v.id));
+    expect(past.every((q) => earlier.includes(q.verb.id))).toBe(true);
   });
 
-  it('rotates through every past week in turn', () => {
-    // On week 3, the rotation should visit weeks 0, 1, 2, then wrap.
-    const seen = [0, 1, 2, 3].map((rotationIndex) => {
+  it('draws from every past week, not just one', () => {
+    const weeks = new Set<number>();
+    for (let i = 0; i < 20; i++) {
       const session = buildDailySession(
-        makeProgress({ dayIndex: 15, dayOfWeek: 1, weekIndex: 3, rotationIndex }),
+        makeProgress({ dayIndex: 24, dayOfWeek: 1, weekIndex: 3 }),
         DATE
       );
-      const past = session.questions.find((q) => q.source === 'past-week');
-      return verbs.indexOf(past!.verb) >= 0
-        ? Math.floor(verbs.indexOf(past!.verb) / WEEK_LENGTH)
-        : -1;
-    });
-    expect(seen).toEqual([0, 1, 2, 0]);
+      for (const q of session.questions.filter((x) => x.source === 'past-week')) {
+        weeks.add(Math.floor(verbs.indexOf(q.verb) / WEEK_LENGTH));
+      }
+    }
+    expect(weeks).toEqual(new Set([0, 1, 2]));
   });
 
   it('never draws a refresher from the week being learned now', () => {
-    for (let rotationIndex = 0; rotationIndex < 12; rotationIndex++) {
+    for (let i = 0; i < 12; i++) {
       const session = buildDailySession(
-        makeProgress({ dayIndex: 15, dayOfWeek: 1, weekIndex: 2, rotationIndex }),
+        makeProgress({ dayIndex: 15, dayOfWeek: 1, weekIndex: 2 }),
         DATE
       );
       const currentWeek = getWeekVerbs(2).map((v) => v.id);
@@ -182,24 +168,6 @@ describe('question construction', () => {
       const other = q.direction === 'en-to-jp' ? q.verb.english : q.verb.masu;
       expect(wrong).not.toContain(other);
     }
-  });
-});
-
-describe('shaky verbs come first', () => {
-  it('puts a verb with a broken streak ahead of a solid one', () => {
-    // Attention is freshest at the start, so the ones being missed lead.
-    const progress = makeProgress({
-      dayIndex: 3,
-      dayOfWeek: 3,
-      records: {
-        [verbs[0].id]: makeRecord(verbs[0].id, { streak: 9 }),
-        [verbs[1].id]: makeRecord(verbs[1].id, { streak: 0, incorrectCount: 4 }),
-      },
-    });
-    const thisWeek = buildDailySession(progress, DATE).questions.filter(
-      (q) => q.source === 'this-week'
-    );
-    expect(thisWeek[0].verb.id).toBe(verbs[1].id);
   });
 });
 
@@ -256,9 +224,8 @@ describe('walking the course day by day', () => {
       progress = nextDay(progress);
     }
 
-    // The point of rotating past weeks is that sessions stay bounded as the
-    // dictionary grows. Worst case is the day-7 test plus a refresher.
-    expect(longest).toBeLessThanOrEqual(WEEK_LENGTH * 3);
+    // Hard cap, however far into the course.
+    expect(longest).toBeLessThanOrEqual(MAX_QUESTIONS);
   });
 
   it('never builds a session with no questions', () => {

@@ -13,14 +13,17 @@ import { verbs, getWeekVerbs, getTotalWeeks, WEEK_LENGTH } from '@/data/verbs/di
  *
  * The shape of a day, per the method:
  *   - Days 1-6 of a week: learn ONE new verb, then test the earlier days of
- *     this week, plus one past week cycled in by rotation.
- *   - Day 7: no new verb. The whole week is tested together, plus the rotated
- *     past week.
+ *     this week, topped up with random verbs from past weeks.
+ *   - Day 7: no new verb. The whole week is tested together, topped up the
+ *     same way.
  *
- * Every verb is tested in both directions across a session where possible, and
- * the mnemonic is never shown as part of the prompt — it is revealed only after
- * an answer, as the reminder. The hook is scaffolding, not the answer.
+ * A session is hard-capped at MAX_QUESTIONS no matter where in the course you
+ * are. The mnemonic is never shown as part of the prompt — it is revealed only
+ * after an answer, as the reminder. The hook is scaffolding, not the answer.
  */
+
+/** Hard ceiling on questions in one session, the new verb included. */
+export const MAX_QUESTIONS = 10;
 
 /** Keeps a stored counter inside a usable range. */
 function clamp(value: number, min: number, max: number): number {
@@ -35,6 +38,14 @@ function shuffle<T>(arr: T[]): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+function randomDirection(): TestDirection {
+  return Math.random() < 0.5 ? 'en-to-jp' : 'jp-to-en';
+}
+
+function otherDirection(direction: TestDirection): TestDirection {
+  return direction === 'en-to-jp' ? 'jp-to-en' : 'en-to-jp';
 }
 
 /**
@@ -61,55 +72,11 @@ function buildQuestion(
   };
 }
 
-/**
- * Tests a set of verbs in both directions. Verbs the user has been getting
- * wrong lead the list so they are seen while attention is freshest.
- */
-function buildQuestionsFor(
-  list: Verb[],
-  source: QuestionSource,
-  progress: UserProgress,
-  bothDirections: boolean
-): ReviewQuestion[] {
-  const ordered = [...list].sort((a, b) => {
-    const ra = progress.records[a.id];
-    const rb = progress.records[b.id];
-    return (ra?.streak ?? 0) - (rb?.streak ?? 0);
-  });
-
-  const questions: ReviewQuestion[] = [];
-  for (const verb of ordered) {
-    questions.push(buildQuestion(verb, 'en-to-jp', source));
-    if (bothDirections) {
-      questions.push(buildQuestion(verb, 'jp-to-en', source));
-    }
-  }
-  return questions;
-}
-
-/**
- * Which past week to cycle in today. Weeks rotate so every previously learned
- * verb resurfaces on a predictable cadence no matter how large the dictionary
- * grows — the session length stays bounded.
- *
- * Returns null while still in week 1, when there is no past week yet.
- */
-function getRotatedWeek(progress: UserProgress, weekIndex: number): number | null {
-  // Weeks before the current one are the pool — the current week is already
-  // being drilled today, so repeating it would waste the slot.
-  //
-  // Once the course is finished the state parks on the final week forever. If
-  // the pool stayed exclusive, that last week would be the only one never
-  // refreshed, so at that point it joins the rotation.
-  const pool = isCourseComplete(progress) ? weekIndex + 1 : weekIndex;
-  if (pool <= 0) return null;
-
-  const rotation = Number.isFinite(progress.rotationIndex)
-    ? Math.trunc(progress.rotationIndex)
-    : 0;
-  // Modulo of a negative number is negative in JS, which would index off the
-  // front of the dictionary.
-  return ((rotation % pool) + pool) % pool;
+/** Every verb taught in the weeks before `weekIndex`. */
+function getPastVerbs(weekIndex: number, known: readonly string[]): Verb[] {
+  const past: Verb[] = [];
+  for (let w = 0; w < weekIndex; w++) past.push(...getWeekVerbs(w, known));
+  return past;
 }
 
 export function buildDailySession(progress: UserProgress, date: string): DailySession {
@@ -132,31 +99,37 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
   // A short final week tests as soon as its verbs run out.
   const isWeekTest = dayOfWeek > weekVerbs.length;
 
-  const questions: ReviewQuestion[] = [];
-
   // The new verb for today — index within the week is dayOfWeek - 1.
   const newVerb = isWeekTest ? null : weekVerbs[dayOfWeek - 1] ?? null;
 
-  if (isWeekTest) {
-    // Day 7: the full week reviewed together, both directions.
-    questions.push(...buildQuestionsFor(weekVerbs, 'week-test', progress, true));
-  } else {
-    // Earlier days of this week get retested — this is the "next day it tests
-    // your memory" part. Both directions, since the set is small.
-    const earlier = weekVerbs.slice(0, dayOfWeek - 1);
-    questions.push(...buildQuestionsFor(earlier, 'this-week', progress, true));
+  const thisWeekSource: QuestionSource = isWeekTest ? 'week-test' : 'this-week';
+  const thisWeek = isWeekTest ? weekVerbs : weekVerbs.slice(0, dayOfWeek - 1);
+  const budget = MAX_QUESTIONS - (newVerb ? 1 : 0);
+  const review: ReviewQuestion[] = [];
 
-    // Today's new verb is tested once at the end, after being taught.
-    if (newVerb) {
-      questions.push(buildQuestion(newVerb, 'en-to-jp', 'new'));
-    }
+  // 1. Every verb from this week so far, once each in a random direction —
+  //    this is the "next day it tests your memory" part of the method.
+  const thisWeekFirst = shuffle(thisWeek)
+    .slice(0, budget)
+    .map((verb) => buildQuestion(verb, randomDirection(), thisWeekSource));
+  review.push(...thisWeekFirst);
+
+  // 2. Fill the remaining slots with random verbs from past weeks.
+  const past = shuffle(getPastVerbs(weekIndex, known)).slice(0, budget - review.length);
+  review.push(...past.map((verb) => buildQuestion(verb, randomDirection(), 'past-week')));
+
+  // 3. Early on there may be no past weeks yet — use the leftover slots to ask
+  //    this week's verbs the other way round.
+  for (const q of thisWeekFirst) {
+    if (review.length >= budget) break;
+    review.push(buildQuestion(q.verb, otherDirection(q.direction), thisWeekSource));
   }
 
-  // One past week cycled back in — single direction to keep the session short.
-  const rotated = getRotatedWeek(progress, weekIndex);
-  if (rotated !== null) {
-    const pastVerbs = getWeekVerbs(rotated, known);
-    questions.push(...buildQuestionsFor(pastVerbs, 'past-week', progress, false));
+  const questions = shuffle(review);
+
+  // Today's new verb is tested once at the end, after being taught.
+  if (newVerb) {
+    questions.push(buildQuestion(newVerb, 'en-to-jp', 'new'));
   }
 
   return {
