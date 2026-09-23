@@ -13,7 +13,7 @@ import { verbs, getWeekVerbs, getTotalWeeks, WEEK_LENGTH } from '@/data/verbs/di
  *
  * The shape of a day, per the method:
  *   - Days 1-6 of a week: learn ONE new verb, then test the earlier days of
- *     this week, topped up with random verbs from past weeks.
+ *     this week, topped up with past-week verbs, weighted toward misses.
  *   - Day 7: no new verb. The whole week is tested together, topped up the
  *     same way.
  *
@@ -72,6 +72,32 @@ function buildQuestion(
   };
 }
 
+/**
+ * How strongly a verb should be favoured when drawing refreshers. Every miss
+ * adds weight, and a run of correct answers since then wears it back down —
+ * so a dud (missed, streak 0) is several times likelier to come up than a verb
+ * you've never missed, and it fades back to normal as you start getting it.
+ */
+function reviewWeight(verb: Verb, progress: UserProgress): number {
+  const record = progress.records[verb.id];
+  if (!record) return 1;
+  const misses = Math.max(0, record.incorrectCount || 0);
+  const streak = Math.max(0, record.streak || 0);
+  return 1 + (4 * misses) / (1 + streak);
+}
+
+/**
+ * Picks `count` distinct verbs at random, weighted by `weightOf`
+ * (Efraimidis-Spirakis: each item's key is rand^(1/w), highest keys win).
+ */
+function weightedSample(list: Verb[], count: number, weightOf: (v: Verb) => number): Verb[] {
+  return list
+    .map((verb) => ({ verb, key: Math.random() ** (1 / weightOf(verb)) }))
+    .sort((a, b) => b.key - a.key)
+    .slice(0, Math.max(0, count))
+    .map((x) => x.verb);
+}
+
 /** Every verb taught in the weeks before `weekIndex`. */
 function getPastVerbs(weekIndex: number, known: readonly string[]): Verb[] {
   const past: Verb[] = [];
@@ -114,8 +140,11 @@ export function buildDailySession(progress: UserProgress, date: string): DailySe
     .map((verb) => buildQuestion(verb, randomDirection(), thisWeekSource));
   review.push(...thisWeekFirst);
 
-  // 2. Fill the remaining slots with random verbs from past weeks.
-  const past = shuffle(getPastVerbs(weekIndex, known)).slice(0, budget - review.length);
+  // 2. Fill the remaining slots with random verbs from past weeks, favouring
+  //    the ones you've been getting wrong.
+  const past = weightedSample(getPastVerbs(weekIndex, known), budget - review.length, (v) =>
+    reviewWeight(v, progress)
+  );
   review.push(...past.map((verb) => buildQuestion(verb, randomDirection(), 'past-week')));
 
   // 3. Early on there may be no past weeks yet — use the leftover slots to ask

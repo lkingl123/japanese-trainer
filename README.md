@@ -23,12 +23,13 @@ kotowarimasu → refuse
 |-----|--------------|
 | 1–6 | Learn **1 new verb**, then get re-tested on the earlier days of this week |
 | 7 | No new verb — the **whole week** is tested together |
-| Every day | Leftover slots are filled with **random verbs from past weeks** |
+| Every day | Leftover slots are filled with **random verbs from past weeks**, weighted toward ones you've missed |
 
 A session is **hard-capped at 10 questions** (`MAX_QUESTIONS` in
 `src/lib/session.ts`), new verb included. This week's verbs are asked once each
 in a random direction, the rest is a random draw from everything learned
-before, the order is shuffled, and the new verb always comes last.
+before — verbs you've missed are several times likelier to come up, fading back
+to normal as you get them right again — the order is shuffled, and the new verb always comes last.
 
 ## Rules baked into the app
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildDailySession, advanceProgress, WEEK_LENGTH, MAX_QUESTIONS } from './session';
 import { verbs, getWeekVerbs, getTotalWeeks } from '@/data/verbs/dictionary';
-import { UserProgress } from './types';
+import { UserProgress, VerbRecord } from './types';
 
 const DATE = '2026-09-03';
 
@@ -121,6 +121,42 @@ describe('past-week refreshers', () => {
       }
     }
     expect(weeks).toEqual(new Set([0, 1, 2]));
+  });
+
+  it('favours past verbs you keep getting wrong', () => {
+    // Weeks 0-2 are past (21 verbs), 7 slots on day 3 of week 4. A verb you
+    // have never missed turns up about a third of the time; a dud far more.
+    const dud = verbs[4].id;
+    const fine = verbs[5].id;
+    const record = (verbId: string, over: Partial<VerbRecord>): VerbRecord => ({
+      verbId,
+      learnedOn: DATE,
+      weekIndex: 0,
+      correctCount: 0,
+      incorrectCount: 0,
+      streak: 0,
+      lastTested: null,
+      ...over,
+    });
+    const progress = makeProgress({
+      dayIndex: 24,
+      dayOfWeek: 3,
+      weekIndex: 3,
+      records: {
+        [dud]: record(dud, { incorrectCount: 3, streak: 0 }),
+        [fine]: record(fine, { correctCount: 5, streak: 5 }),
+      },
+    });
+
+    let dudHits = 0;
+    let fineHits = 0;
+    for (let i = 0; i < 300; i++) {
+      const ids = buildDailySession(progress, DATE).questions.map((q) => q.verb.id);
+      if (ids.includes(dud)) dudHits++;
+      if (ids.includes(fine)) fineHits++;
+    }
+    expect(dudHits).toBeGreaterThan(270);
+    expect(fineHits).toBeLessThan(150);
   });
 
   it('never draws a refresher from the week being learned now', () => {
